@@ -13,31 +13,29 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(cac/nve,FixNVECAC)
+FixStyle(cac/oneway,CACFixOneWay)
 
 #else
 
-#ifndef LMP_FIX_NVE_CAC_H
-#define LMP_FIX_NVE_CAC_H
+#ifndef LMP_FIX_CAC_ONEWAY_H
+#define LMP_FIX_CAC_ONEWAY_H
 
 #include "fix.h"
 
 namespace LAMMPS_NS {
 
-class FixNVECAC : public Fix {
+class CACFixOneWay : public Fix {
  public:
-  FixNVECAC(class LAMMPS *, int, char **);
-  virtual ~FixNVECAC() {}
+  CACFixOneWay(class LAMMPS *, int, char **);
+  virtual ~CACFixOneWay();
   int setmask();
   virtual void init();
-  virtual void initial_integrate(int);
-  virtual void final_integrate();
-  virtual void reset_dt();
+  virtual void end_of_step();
 
  protected:
-  double dtv,dtf;
-  double *step_respa;
-  int mass_require;
+  int direction;
+  int regionidx;
+  char *regionstr;
 };
 
 }
@@ -53,7 +51,7 @@ Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
 command-line option when running LAMMPS to see the offending line.
 
-E: CAC fix styles require a CAC atom style
+E: Region for fix oneway does not exist
 
 Self-explanatory.
 
