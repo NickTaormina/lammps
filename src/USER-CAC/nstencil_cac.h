@@ -15,7 +15,7 @@
 
 NStencilStyle(cac,
               NStencilCAC,
-              NS_CAC | NS_BIN | NS_3D | NS_ORTHO | NS_TRI)
+              NS_CAC | NS_BIN | NS_FULL | NS_3D | NS_ORTHO | NS_TRI)
 
 #else
 
