@@ -36,7 +36,7 @@ class PairCACEAM : public PairCAC {
 
 	// potentials in spline form used for force computation
 
-  double dr, rdr, drho, rdrho, rhomax;
+  double dr, rdr, drho, rdrho, rhomax, rhomin;
   double ***rhor_spline, ***frho_spline, ***z2r_spline;
 
   PairCACEAM(class LAMMPS *);

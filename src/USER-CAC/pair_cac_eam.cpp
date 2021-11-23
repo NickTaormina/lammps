@@ -71,6 +71,8 @@ PairCACEAM::PairCACEAM(LAMMPS *lmp) : PairCAC(lmp)
   add_fp = NULL;
   add_index = NULL;
   nmax = add_density_count = add_density_max = flux_count = 0;
+
+  rhomax = rhomin = 0.0;
 }
 
 /* ---------------------------------------------------------------------- */
