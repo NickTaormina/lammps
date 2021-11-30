@@ -36,16 +36,16 @@ class PairCACEAMInterp : public PairCAC {
 
 	// potentials in spline form used for force computation
 
-  double dr, rdr, drho, rdrho, rhomax;
+  double dr, rdr, drho, rdrho, rhomax, rhomin;
   double ***rhor_spline, ***frho_spline, ***z2r_spline;
 
   PairCACEAMInterp(class LAMMPS *);
   virtual ~PairCACEAMInterp();
-  
+
   virtual void coeff(int, char **);
   virtual void init_style();
   virtual double init_one(int, int);
-  
+
   virtual void *extract(const char *, int &);
   virtual void swap_eam(double *, double **);
 
@@ -70,7 +70,7 @@ class PairCACEAMInterp : public PairCAC {
   double density;
   double **quad_electron_densities;
   int max_density;
- 
+
   virtual void allocate();
   virtual void read_file(char *);
   virtual void array2spline();
@@ -112,7 +112,7 @@ class PairCACEAMInterp : public PairCAC {
   virtual void interpolate(int, double, double *, double **);
   virtual void grab(FILE *, int, double *);
 
-  //further CAC functions 
+  //further CAC functions
   virtual void force_densities(int, double, double, double, double, double
     &fx, double &fy, double &fz);
   virtual void pre_force_densities();
