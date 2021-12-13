@@ -131,8 +131,8 @@ void FixViscousCAC::post_force(int vflag)
       nodes_per_element = nodes_count_list[element_type[i]];
 
     for (int k = 0; k < poly_count[i]; k++) {
+      drag = gamma[node_types[i][k]];
       for (int j = 0; j < nodes_per_element; j++) {
-        drag = gamma[type[i]];
         nodal_forces[i][k][j][0] -= drag * nodal_velocities[i][k][j][0];
         nodal_forces[i][k][j][1] -= drag * nodal_velocities[i][k][j][1];
         nodal_forces[i][k][j][2] -= drag * nodal_velocities[i][k][j][2];
