@@ -201,17 +201,14 @@ void PairCACCoulDSF::force_densities(int iii, double s, double t, double w, doub
   int element_index;
   int *ilist, *jlist, *numneigh, **firstneigh;
   int neigh_max = inner_quad_lists_counts[pqi];
-  
+
   double ****nodal_positions = atom->nodal_positions;
   int **node_types = atom->node_types;
   double **node_charges = atom->node_charges;
   double origin_element_charge= node_charges[iii][poly_counter];
   double neighbor_element_charge;
   int **inner_quad_indices = inner_quad_lists_index[pqi];
-  ilist = list->ilist;
-  numneigh = list->numneigh;
-  firstneigh = list->firstneigh;
-  jlist = firstneigh[iii];
+
   qisq = origin_element_charge*origin_element_charge;
   e_self = -(e_shift/2.0 + alf/MY_PIS) * qisq*qqrd2e;
   quadrature_energy += e_self;
@@ -259,7 +256,7 @@ void PairCACCoulDSF::force_densities(int iii, double s, double t, double w, doub
     }
   }
   //end of force density loop
-  
+
   //additional cac flux contributions due to neighbors interacting with neighbors
   //  in the vicinity of this quadrature point
   if (quad_flux_flag) {
@@ -284,11 +281,11 @@ double PairCACCoulDSF::pair_interaction_q(double distancesq, int itype, int jtyp
   erfcc = t * (A1+t*(A2+t*(A3+t*(A4+t*A5)))) * erfcd;
   forcecoul = prefactor * (erfcc/r + 2.0*alf/MY_PIS * erfcd +
                           r*f_shift) * r;
-  if (factor_coul < 1.0) forcecoul -= (1.0-factor_coul)*prefactor;
+  //if (factor_coul < 1.0) forcecoul -= (1.0-factor_coul)*prefactor;
   fpair = forcecoul / distancesq;
   if (quad_eflag){
     ecoul = prefactor * (erfcc - r*e_shift - distancesq*f_shift);
-    if (factor_coul < 1.0) ecoul -= (1.0-factor_coul)*prefactor;
+    //if (factor_coul < 1.0) ecoul -= (1.0-factor_coul)*prefactor;
   }
   return fpair;
 }

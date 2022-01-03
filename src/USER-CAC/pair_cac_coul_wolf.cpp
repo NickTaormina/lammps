@@ -249,7 +249,7 @@ void PairCACCoulWolf::force_densities(int iii, double s, double t, double w, dou
     }
   }
   //end of force density loop
-  
+
   //additional cac flux contributions due to neighbors interacting with neighbors
   //  in the vicinity of this quadrature point
   if (quad_flux_flag) {
@@ -274,9 +274,9 @@ double PairCACCoulWolf::pair_interaction_q(double distancesq, int itype, int jty
   v_sh = (erfcc - e_shift*r) * prefactor;
   dvdrr = (erfcc / distancesq + 2.0*alf / MY_PIS * erfcd / r) + f_shift;
   forcecoul = dvdrr*distancesq*prefactor;
-  if (factor_coul < 1.0) forcecoul -= (1.0 - factor_coul)*prefactor;
+  //if (factor_coul < 1.0) forcecoul -= (1.0 - factor_coul)*prefactor;
   fpair = forcecoul / distancesq;
-  if(quad_eflag)
-    if (factor_coul < 1.0) v_sh -= (1.0-factor_coul)*prefactor;
+  //if(quad_eflag)
+    //if (factor_coul < 1.0) v_sh -= (1.0-factor_coul)*prefactor;
   return fpair;
 }
