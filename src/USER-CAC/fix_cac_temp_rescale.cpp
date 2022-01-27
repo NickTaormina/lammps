@@ -64,7 +64,7 @@ FixTempRescale_CAC::FixTempRescale_CAC(LAMMPS *lmp, int narg, char **arg) :
 
   t_stop = utils::inumeric(FLERR,arg[5],false,lmp);
   t_window = utils::inumeric(FLERR,arg[6],false,lmp);
-  fraction = utils::inumeric(FLERR,arg[7],false,lmp);
+  fraction = utils::numeric(FLERR,arg[7],false,lmp);
 
   // create a new compute temp
   // id = fix-ID + temp, compute group = fix group
