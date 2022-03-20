@@ -173,13 +173,7 @@ void PairCACEAM::allocate()
   memory->create(type2rhor, n + 1, n + 1, "pair:type2rhor");
   memory->create(type2z2r, n + 1, n + 1, "pair:type2z2r");
   memory->create(scale, n + 1, n + 1, "pair:scale");
-  memory->create(mass_matrix,max_nodes_per_element, max_nodes_per_element,"pairCAC:mass_matrix");
-  memory->create(mass_copy, max_nodes_per_element, max_nodes_per_element,"pairCAC:copy_mass_matrix");
-  memory->create(force_column, max_nodes_per_element,3,"pairCAC:force_residue");
-  memory->create(current_force_column, max_nodes_per_element,"pairCAC:current_force_residue");
-  memory->create(current_nodal_forces, max_nodes_per_element,"pairCAC:current_nodal_force");
-  memory->create(pivot, max_nodes_per_element+1,"pairCAC:pivots");
-  quadrature_init(2);
+  PairCAC::allocate();
 }
 
 /* ----------------------------------------------------------------------

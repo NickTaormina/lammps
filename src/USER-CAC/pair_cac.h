@@ -89,9 +89,9 @@ class PairCAC : public Pair {
   double quadrature_energy;
   double **mass_matrix;
   double **mass_copy;
-  double **force_column;
+  double **force_column, **current_virial_projection, **current_flux_projection;
   double *current_nodal_forces, current_position[3], current_velocity[3];
-  double *current_force_column;
+  double *current_force_column, *current_virial_column, *current_flux_column;
   double *current_x;
   int   *pivot;
   double **shape_quad_result;

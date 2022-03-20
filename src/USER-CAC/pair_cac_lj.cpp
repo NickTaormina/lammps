@@ -94,14 +94,7 @@ void PairCACLJ::allocate()
   memory->create(lj4,n+1,n+1,"pair:lj4");
   memory->create(offset,n+1,n+1,"pair:offset");
 
-
-  memory->create(mass_matrix, max_nodes_per_element, max_nodes_per_element,"pairCAC:mass_matrix");
-  memory->create(mass_copy, max_nodes_per_element, max_nodes_per_element,"pairCAC:copy_mass_matrix");
-  memory->create(force_column, max_nodes_per_element,3,"pairCAC:force_residue");
-  memory->create(current_force_column, max_nodes_per_element,"pairCAC:current_force_residue");
-  memory->create(current_nodal_forces, max_nodes_per_element,"pairCAC:current_nodal_force");
-  memory->create(pivot, max_nodes_per_element+1,"pairCAC:pivots");
-  quadrature_init(2);
+  PairCAC::allocate();
 }
 /* ----------------------------------------------------------------------
 global settings

@@ -82,7 +82,8 @@ PairCAC::PairCAC(LAMMPS *lmp) : Pair(lmp)
   outer_neighflag = 0;
   sector_flag = 0;
   one_layer_flag = 0;
-  shape_quad_result = NULL;
+  shape_quad_result  = current_virial_projection = current_flux_projection = NULL;
+  current_force_column = current_virial_column = current_flux_column = NULL;
   neighbor->pgsize=10;
   neighbor->oneatom=1;
   old_atom_count=0;
@@ -107,6 +108,8 @@ PairCAC::~PairCAC() {
     memory->destroy(current_nodal_forces);
     memory->destroy(pivot);
     memory->destroy(shape_quad_result);
+    memory->destroy(current_virial_projection);
+    memory->destroy(current_flux_projection);
   }
 }
 
@@ -248,8 +251,12 @@ void PairCAC::allocate()
   memory->create(mass_copy, max_nodes_per_element, max_nodes_per_element,"pairCAC:copy_mass_matrix");
   memory->create(force_column, max_nodes_per_element,3,"pairCAC:force_residue");
   memory->create(current_force_column, max_nodes_per_element,"pairCAC:current_force_residue");
+  memory->create(current_virial_column, max_nodes_per_element,"pairCAC:current_virial_projection");
+  memory->create(current_flux_column, max_nodes_per_element,"pairCAC:current_flux_projection");
   memory->create(current_nodal_forces, max_nodes_per_element,"pairCAC:current_nodal_force");
   memory->create(pivot, max_nodes_per_element+1,"pairCAC:pivots");
+  memory->create(current_virial_projection, 6, max_nodes_per_element,"pairCAC:virial_projection");
+  memory->create(current_flux_projection, 24, max_nodes_per_element,"pairCAC:flux_projection");
   quadrature_init(2);
 }
 
@@ -409,7 +416,7 @@ void PairCAC::compute_forcev(int iii){
   double unit_cell_mapped[3];
   int *nodes_count_list = atom->nodes_per_element_list;	
   double coefficients;
-  int nodes_per_element, ns;
+  int nodes_per_element, ns, singular;
   int **surface_counts = atom->surface_counts;
   double ****nodal_virial = atom->nodal_virial;
   double ****nodal_fluxes;
@@ -434,6 +441,24 @@ void PairCAC::compute_forcev(int iii){
   for (int js = 0; js<nodes_per_element; js++) {
     for (int jj = 0; jj<3; jj++) {
       force_column[js][jj] = 0;
+    }
+  }
+
+  //init virial projection
+  if(atom->CAC_virial){
+    for (int jj = 0; jj<6; jj++) {
+      for (int js = 0; js<nodes_per_element; js++) {
+        current_virial_projection[jj][js] = 0;
+      }
+    }
+  }
+    
+    //init surface flux projection
+  if(flux_compute&&atom->cac_flux_flag==2){
+    for (int jj = 0; jj<24; jj++) {
+      for (int js = 0; js<nodes_per_element; js++) {
+        current_flux_projection[jj][js] = 0;
+      }
     }
   }
 
@@ -482,21 +507,30 @@ void PairCAC::compute_forcev(int iii){
   force_densities(iii, current_x[0], current_x[1], current_x[2], coefficients,
     force_density[0], force_density[1], force_density[2]);
   if(!atomic_flag){
-  for (int js = 0; js < nodes_per_element; js++) {
-    shape_func = shape_function(sq, tq, wq, 2, js + 1);
-    for (int jj = 0; jj < 3; jj++) {
-      force_column[js][jj] += coefficients*force_density[jj] * shape_func;
+    for (int js = 0; js < nodes_per_element; js++) {
+      shape_func = shape_function(sq, tq, wq, 2, js + 1);
+      for (int jj = 0; jj < 3; jj++) {
+        force_column[js][jj] += coefficients*force_density[jj] * shape_func;
+      }
     }
+    
     if(atom->CAC_virial){
       for (int jj = 0; jj < 6; jj++){
-          nodal_virial[iii][poly_counter][js][jj] += coefficients*virial_density[jj] * shape_func;
+        for (int js = 0; js < nodes_per_element; js++){
+          shape_func = shape_function(sq, tq, wq, 2, js + 1);
+          current_virial_projection[jj][js] += coefficients*virial_density[jj] * shape_func;
         }
+      }
     }
+
     if(quad_flux_flag&&atom->cac_flux_flag==2){
-    for (int jj = 0; jj < 24; jj++)
-      nodal_fluxes[iii][poly_counter][js][jj] += coefficients*flux_density[jj] * shape_func;
+      for (int jj = 0; jj < 24; jj++){
+        for (int js = 0; js < nodes_per_element; js++){
+          shape_func = shape_function(sq, tq, wq, 2, js + 1);
+          current_flux_projection[jj][js] += coefficients*flux_density[jj] * shape_func;
+        }
+      }
     }
-  }
     if(quad_flux_flag&&atom->cac_flux_flag==1){
       ns = quadrature_point_data[qi + quad_loop][7];
       for (int jj = 0; jj < 24; jj++)
@@ -522,6 +556,29 @@ void PairCAC::compute_forcev(int iii){
   element_energy += coefficients*quadrature_energy/iso_volume;
   }
   }
+
+  //solve for nodal virial interpolant
+  //init virial projection
+  if(atom->CAC_virial){
+    for (int jj = 0; jj<6; jj++) {
+      LUPSolve(mass_copy, pivot, current_virial_projection[jj], nodes_per_element, current_virial_column);
+      for (int js = 0; js < nodes_per_element; js++) {
+        nodal_virial[iii][poly_counter][js][jj] = current_virial_column[js];
+      }
+    }
+    
+  }
+
+  //solve for nodal surface flux interpolant
+  if(flux_compute&&atom->cac_flux_flag==2){
+    for (int jj = 0; jj<24; jj++) {
+      LUPSolve(mass_copy, pivot, current_flux_projection[jj], nodes_per_element, current_flux_column);
+      for (int js = 0; js<nodes_per_element; js++) {
+        nodal_fluxes[iii][poly_counter][js][jj] = current_flux_column[js];
+      }
+    } 
+  }
+
   if(poly_counter == current_poly_count - 1) qi += quadrature_counts[iii];
 }
 
