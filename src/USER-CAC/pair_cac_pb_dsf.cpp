@@ -327,8 +327,9 @@ int nodes_per_element;
                           fpair = forcecoul / distancesq;
                         if (quad_eflag){
                           ecoul = prefactor * (erfcc - r*e_shift - distancesq*f_shift);
-                        if (factor_coul < 1.0) ecoul -= (1.0-factor_coul)*prefactor;
-            }
+                          if (factor_coul < 1.0) ecoul -= (1.0-factor_coul)*prefactor;
+                          quadrature_energy += ecoul/2;
+                        }
 					}
 					if (distancesq < cut_buck*cut_buck) {
 						if ((scan_type==1&&origin_type!=1)|| (scan_type != 1 && origin_type == 1)|| (scan_type != 1 && origin_type != 1)) {
@@ -338,6 +339,9 @@ int nodes_per_element;
 							rexp = exp(-r*rhoinv[origin_type][scan_type]);
 							forcebuck = buck1[origin_type][scan_type] * r*rexp - buck2[origin_type][scan_type] * r6inv;
 							fpair2 = forcebuck*r2inv;
+							if (quad_eflag)
+                quadrature_energy += (a[origin_type][scan_type]*rexp - c[origin_type][scan_type]*r6inv -
+                                     offset[origin_type][scan_type])/2;
 						}
 					}
 					//compute total pair force
@@ -352,9 +356,6 @@ int nodes_per_element;
 		      virial_density[4] += 0.5*delx*delz*fpair;
 		      virial_density[5] += 0.5*dely*delz*fpair;
 		      }
-          if (quad_eflag)
-          quadrature_energy += (a[origin_type][scan_type]*rexp - c[origin_type][scan_type]*r6inv -
-            offset[origin_type][scan_type])/2+ecoul/2;
 				}
 			}
 

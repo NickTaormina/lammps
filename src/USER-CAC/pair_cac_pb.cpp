@@ -313,9 +313,6 @@ int **inner_quad_indices = inner_quad_lists_index[pqi];
         virial_density[4] += 0.5*delx*delz*fpair;
         virial_density[5] += 0.5*dely*delz*fpair;
       }
-      if (quad_eflag)
-        quadrature_energy += (a[origin_type][scan_type]*rexp - c[origin_type][scan_type]*r6inv -
-          offset[origin_type][scan_type])/2+v_sh/2;
       //cac flux contribution due to current quadrature point and neighbor pair interactions
       if(quad_flux_flag){
         current_quad_flux(l,delx*fpair,dely*fpair,delz*fpair);
@@ -353,6 +350,9 @@ double PairCACPb::pair_interaction_q(double distancesq, int itype, int jtype
   rexp = exp(-r*rhoinv[itype][jtype]);
   forcebuck = buck1[itype][jtype] * r*rexp - buck2[itype][jtype] * r6inv;
   forcebuck = forcebuck*r2inv;
+  if (quad_eflag)
+    quadrature_energy += (a[itype][jtype]*rexp - c[itype][jtype]*r6inv -
+    offset[itype][jtype])/2;
   }
   }
   if(distancesq < cut_coul*cut_coul){
@@ -364,6 +364,8 @@ double PairCACPb::pair_interaction_q(double distancesq, int itype, int jtype
   forcecoul = dvdrr*distancesq*prefactor;
   //if (factor_coul < 1.0) forcecoul -= (1.0 - factor_coul)*prefactor;
   forcecoul = forcecoul / distancesq;
+  if (quad_eflag)
+    quadrature_energy += v_sh/2;
   //if(quad_eflag)
     //if (factor_coul < 1.0) v_sh -= (1.0-factor_coul)*prefactor;
   }
