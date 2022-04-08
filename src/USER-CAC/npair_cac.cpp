@@ -343,16 +343,18 @@ void NPairCAC::build(NeighList *list)
   }
 
   //determine which elements need more quadrature points due to interfacing with smaller resolutions
-  for (i = 0; i < nlocal; i++) {
-    if(!element_type[i]) continue;
-    for (int jj = 0; jj < numneigh[i]; jj++){
-      j = list_container[i][jj];
-      //determination used by product of all three element scales (volumetric comparison)
-      //not a rigorous choice but takes care of most obvious cases that will arise; problematic
-      //for models with elements that are slender in a given dimension
-      if(element_scale[i][0]*element_scale[i][1]*element_scale[i][2]>2*element_scale[j][0]*element_scale[j][1]*element_scale[j][2]){
-        if(atom->interface_quadrature) interface_flags[i] = 1;
-        break;
+  if(atom->interface_quadrature){
+    for (i = 0; i < nlocal; i++) {
+      if(!element_type[i]) continue;
+      for (int jj = 0; jj < numneigh[i]; jj++){
+        j = list_container[i][jj];
+        //determination used by product of all three element scales (volumetric comparison)
+        //not a rigorous choice but takes care of most obvious cases that will arise; problematic
+        //for models with elements that are slender in a given dimension
+        if(element_scale[i][0]*element_scale[i][1]*element_scale[i][2]>2*element_scale[j][0]*element_scale[j][1]*element_scale[j][2]){
+          interface_flags[i] = 1;
+          break;
+        }
       }
     }
   }
