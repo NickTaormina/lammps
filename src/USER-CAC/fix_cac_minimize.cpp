@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include "fix_cac_minimize.h"
 #include "atom.h"
+#include "atom_vec.h"
 #include "domain.h"
 #include "memory.h"
 #include "error.h"
@@ -71,18 +72,18 @@ void FixCACMinimize::add_vector(int n)
   int *element_type = atom->element_type;
   int *poly_count = atom->poly_count;
   int node_count;
-  memory->grow(peratom,nvector+1,"minimize:peratom");
+  memory->grow(peratom,nvector+1,"FixCACMinimize:peratom");
   peratom[nvector] = n;
 
   nodal_vectors = (double *****)
-    memory->srealloc(nodal_vectors,(nvector+1)*sizeof(double ****),"minimize:vectors");
+    memory->srealloc(nodal_vectors,(nvector+1)*sizeof(double ****),"FixCACMinimize:vectors");
   nodal_vectors[nvector] = (double ****)
-    memory->smalloc(atom->nmax*sizeof(double ***),"minimize:vector");
+    memory->smalloc(atom->nmax*sizeof(double ***),"FixCACMinimize:vector");
 
   //allocate element sizing for the additional vector
   for(int ecount=0; ecount < nlocal; ecount++){
   node_count = nodes_per_element_list[element_type[ecount]];
-  memory->create(nodal_vectors[nvector][ecount], poly_count[ecount], node_count, peratom[nvector], "minimize:vectors");
+  memory->create(nodal_vectors[nvector][ecount], poly_count[ecount], node_count, peratom[nvector], "FixCACMinimize:vectors");
   }
   if(nlocal>alloc_counter) alloc_counter = nlocal;
   //initialize to zero
@@ -93,6 +94,10 @@ void FixCACMinimize::add_vector(int n)
         for(int ix = 0; ix < peratom[nvector]; ix++)
         nodal_vectors[nvector][ecount][ipoly][inode][ix] = 0;
   }
+
+  //boost max exchange variables for communication buffer
+  atom->avec->maxexchange += n*atom->nodes_per_element*atom->maxpoly;
+
   nvector++;
 }
 
@@ -228,7 +233,7 @@ void FixCACMinimize::grow_arrays(int nmax)
 {
   for (int m = 0; m < nvector; m++)
   nodal_vectors[m] =
-    (double ****) memory->srealloc(nodal_vectors[m],sizeof(double ***)*nmax, "atom:nodal_positions");
+    (double ****) memory->srealloc(nodal_vectors[m],sizeof(double ***)*nmax, "FixCACMinimize:nodal_vectors");
 }
 
 /* ----------------------------------------------------------------------
@@ -248,7 +253,7 @@ void FixCACMinimize::shrink_arrays(int n)
   //shrink pointer arrays
   for (int m = 0; m < nvector; m++)
   nodal_vectors[m] =
-    (double ****) memory->srealloc(nodal_vectors[m],sizeof(double ***)*n, "atom:nodal_positions");
+    (double ****) memory->srealloc(nodal_vectors[m],sizeof(double ***)*n, "FixCACMinimize:nodal_vectors");
 }
 
 /* ----------------------------------------------------------------------
@@ -266,7 +271,7 @@ void FixCACMinimize::allocate_element(int element_index, int node_count, int pol
   alloc_counter++;
   //create new allocation for this element
   for (int m = 0; m < nvector; m++)
-  memory->create(nodal_vectors[m][element_index], poly_count, node_count, peratom[m], "atom:nodal_positions");
+  memory->create(nodal_vectors[m][element_index], poly_count, node_count, peratom[m], "FixCACMinimize:nodal_vectors");
 
 }
 
@@ -295,7 +300,7 @@ void FixCACMinimize::copy_arrays(int i, int j, int /*delflag*/)
 
   //create new allocation for this element
   for (m = 0; m < nvector; m++)
-  memory->create(nodal_vectors[m][j], poly_count[j], node_count, peratom[m], "atom:nodal_positions");
+  memory->create(nodal_vectors[m][j], poly_count[j], node_count, peratom[m], "FixCACMinimize:nodal_vectors");
   
   for (m = 0; m < nvector; m++) {
     nper = peratom[m];

@@ -30,29 +30,32 @@ using namespace LAMMPS_NS;
 DumpCACAtom::DumpCACAtom(LAMMPS *lmp, int narg, char **arg) : Dump(lmp, narg, arg),
   typenames(NULL)
 {
-  if (narg != 5 && narg!=6) error->all(FLERR,"Illegal dump cac/atom command");
+  if (narg < 5 || narg > 6) error->all(FLERR,"Illegal dump cac/atom command");
   if (binary || multiproc) error->all(FLERR,"Invalid dump cac/atom filename");
 
   
-
+  int iarg=5;
   buffer_allow = 1;
   buffer_flag = 1;
   sort_flag = 0;
   sortcol = 0;
   charge_flag = 0;
-  if (narg==6 && strcmp(arg[5], "charge") == 0) charge_flag = 1;
-  else if(narg==6) error->all(FLERR, "Unexpected argument in dump cac/atom command");
+  while(iarg<narg){
+  if (strcmp(arg[iarg], "charge") == 0) charge_flag = 1;
+  else error->all(FLERR, "Unexpected argument in dump cac/atom command");
+  iarg++;
+  }
 
   if (format_default) delete [] format_default;
   char *str;
-  if(charge_flag==1){ 
+  if(charge_flag){
     size_one = 12;
     str = (char *) "%d %d %g %g %g %g %g %g %g %g %g %g";
-    }
-  else {
+  }
+  else{
     size_one = 11;
     str = (char *) "%d %d %g %g %g %g %g %g %g %g %g";
-    }
+  }
   
   int n = strlen(str) + 1;
   format_default = new char[n];
@@ -237,6 +240,7 @@ void DumpCACAtom::pack(tagint *ids)
   double ***current_nodal_forces;
   double shape_func;
   int nodes_per_element;
+  bigint natoms = atom->natoms;
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
   int nlocal = atom->nlocal;
@@ -249,6 +253,7 @@ void DumpCACAtom::pack(tagint *ids)
   double ****nodal_velocities = atom->nodal_velocities;
   double ****nodal_forces = atom->nodal_forces;
   int *periodicity = domain->periodicity;
+  bigint tag_map;
   double *prd = domain->prd;
   
   //int maptag=1;
@@ -286,6 +291,13 @@ void DumpCACAtom::pack(tagint *ids)
               unit_cell[1]=unit_cell_mapped[1]/2+e2*unit_cell_mapped[1]-1;
               unit_cell[2]=unit_cell_mapped[2]/2+e3*unit_cell_mapped[2]-1;
               for (int polyscan = 0; polyscan < poly_count[i]; polyscan++) {
+                if(e1==0&&e2==0&&e3==0&&polyscan==0) 
+                  tag_map = tag[i];
+                else
+                  tag_map = natoms + polyscan + e3*poly_count[i] + e2*element_scale[i][2]*poly_count[i]
+                            + e1*element_scale[i][1]*element_scale[i][2]*poly_count[i]
+                            + (tag[i]-1)*element_scale[i][0]*element_scale[i][1]*element_scale[i][2]*poly_count[i];
+                
                 xmap[0]=0;
                 xmap[1]=0;
                 xmap[2]=0;
@@ -352,9 +364,9 @@ void DumpCACAtom::pack(tagint *ids)
                 }
               }
               }   
-              buf[m++] = tag[i];
+              buf[m++] = tag_map;
               buf[m++] = node_types[i][polyscan];
-              if(charge_flag) buf[m++] = node_charges[i][0];
+              if(charge_flag) buf[m++] = node_charges[i][polyscan];
               buf[m++] = xmap[0];
               buf[m++] = xmap[1];
               buf[m++] = xmap[2];
@@ -390,10 +402,10 @@ int DumpCACAtom::convert_string(int n, double *mybuf)
       maxsbuf += DELTA;
       memory->grow(sbuf,maxsbuf,"dump:sbuf");
     }
-    if(charge_flag)
+    if (charge_flag)
     offset += sprintf(&sbuf[offset],format, static_cast<int> (mybuf[m]),
                       static_cast<int> (mybuf[m+1]),mybuf[m+2],mybuf[m+3],mybuf[m+4],
-            mybuf[m+5],mybuf[m+6],mybuf[m+7],mybuf[m+8],mybuf[m+9],mybuf[m+10],mybuf[m+11]);
+            mybuf[m+5],mybuf[m+6],mybuf[m+7],mybuf[m+8],mybuf[m+9],mybuf[m+10], mybuf[m+11]);
     else
     offset += sprintf(&sbuf[offset],format, static_cast<int> (mybuf[m]),
                       static_cast<int> (mybuf[m+1]),mybuf[m+2],mybuf[m+3],mybuf[m+4],
@@ -424,13 +436,13 @@ void DumpCACAtom::write_lines(int n, double *mybuf)
 {
   int m = 0;
   for (int i = 0; i < n; i++) {
-    if(charge_flag)
-    fprintf(fp,format,static_cast<int> (mybuf[m]),
-            static_cast<int> (mybuf[m+1]),mybuf[m+2],mybuf[m+3],mybuf[m+4],
-            mybuf[m+5],mybuf[m+6],mybuf[m+7],mybuf[m+8],mybuf[m+9],mybuf[m+10],mybuf[m+11]);
+    if (charge_flag)
+    fprintf(fp,format, static_cast<int> (mybuf[m]),
+                      static_cast<int> (mybuf[m+1]),mybuf[m+2],mybuf[m+3],mybuf[m+4],
+            mybuf[m+5],mybuf[m+6],mybuf[m+7],mybuf[m+8],mybuf[m+9],mybuf[m+10], mybuf[m+11]);
     else
-    fprintf(fp,format,static_cast<int> (mybuf[m]),
-            static_cast<int> (mybuf[m+1]),mybuf[m+2],mybuf[m+3],mybuf[m+4],
+    fprintf(fp,format, static_cast<int> (mybuf[m]),
+                      static_cast<int> (mybuf[m+1]),mybuf[m+2],mybuf[m+3],mybuf[m+4],
             mybuf[m+5],mybuf[m+6],mybuf[m+7],mybuf[m+8],mybuf[m+9],mybuf[m+10]);
     m += size_one;
   }

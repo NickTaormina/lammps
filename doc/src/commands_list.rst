@@ -33,10 +33,12 @@ Commands
    dump
    dump_adios
    dump_cac_atom
+   dump_cac_atom_flux
    dump_cac_initial_nodes
    dump_cac_kinetic
    dump_cac_nodal_positions
    dump_cac_nodal_displacements
+   dump_cac_nodal_flux
    dump_cac_nodal_velocities
    dump_cac_nodal_virial
    dump_cac_nodal_forces
@@ -52,6 +54,7 @@ Commands
    echo
    fix
    fix_modify
+   full_quad_interface
    group
    group2ndx
    hyper
@@ -60,6 +63,7 @@ Commands
    improper_style
    include
    info
+   interface_quadrature
    jump
    kim_commands
    kspace_modify
@@ -68,6 +72,7 @@ Commands
    lattice
    log
    mass
+   mdi_engine
    message
    min_modify
    min_spin
@@ -86,6 +91,7 @@ Commands
    pair_style
    pair_write
    partition
+   plugin
    prd
    print
    processors

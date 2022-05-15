@@ -44,8 +44,7 @@ PairCACBuck::PairCACBuck(LAMMPS *lmp) : PairCAC(lmp)
   restartinfo = 0;
   nmax = 0;
   outer_neighflag = 0;
-  inner_neighbor_coords = NULL;
-  inner_neighbor_types = NULL;
+  flux_enable = 1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -93,13 +92,7 @@ void PairCACBuck::allocate()
   memory->create(buck1, n + 1, n + 1, "pair:buck1");
   memory->create(buck2, n + 1, n + 1, "pair:buck2");
   memory->create(offset, n + 1, n + 1, "pair:offset");
-  memory->create(mass_matrix, max_nodes_per_element, max_nodes_per_element,"pairCAC:mass_matrix");
-  memory->create(mass_copy, max_nodes_per_element, max_nodes_per_element,"pairCAC:copy_mass_matrix");
-  memory->create(force_column, max_nodes_per_element,3,"pairCAC:force_residue");
-  memory->create(current_force_column, max_nodes_per_element,"pairCAC:current_force_residue");
-  memory->create(current_nodal_forces, max_nodes_per_element,"pairCAC:current_nodal_force");
-  memory->create(pivot, max_nodes_per_element+1,"pairCAC:pivots");
-  quadrature_init(2);
+  PairCAC::allocate();
 }
 
 /* ----------------------------------------------------------------------
@@ -109,7 +102,7 @@ void PairCACBuck::settings(int narg, char **arg) {
   if (narg <1 || narg>2) error->all(FLERR, "Illegal pair_style cac/buck command");
 
   force->newton_pair = 0;
-  cut_global_s = force->numeric(FLERR, arg[0]);
+  cut_global_s = utils::numeric(FLERR, arg[0],false,lmp);
 
    if (narg == 2) {
     if (strcmp(arg[1], "one") == 0) atom->one_layer_flag=one_layer_flag = 1;
@@ -134,16 +127,16 @@ void PairCACBuck::coeff(int narg, char **arg) {
   if (!allocated) allocate();
 
   int ilo, ihi, jlo, jhi;
-  force->bounds(FLERR, arg[0], atom->ntypes, ilo, ihi);
-  force->bounds(FLERR, arg[1], atom->ntypes, jlo, jhi);
+  utils::bounds(FLERR,arg[0],1,atom->ntypes,ilo,ihi,error);
+  utils::bounds(FLERR,arg[1],1,atom->ntypes,jlo,jhi,error);
 
-  double a_one = force->numeric(FLERR, arg[2]);
-  double rho_one = force->numeric(FLERR, arg[3]);
+  double a_one = utils::numeric(FLERR, arg[2],false,lmp);
+  double rho_one = utils::numeric(FLERR, arg[3],false,lmp);
   if (rho_one <= 0) error->all(FLERR, "Incorrect args for pair coefficients");
-  double c_one = force->numeric(FLERR, arg[4]);
+  double c_one = utils::numeric(FLERR, arg[4],false,lmp);
 
   double cut_one = cut_global_s;
-  if (narg == 6) cut_one = force->numeric(FLERR, arg[5]);
+  if (narg == 6) cut_one = utils::numeric(FLERR, arg[5],false,lmp);
 
   int count = 0;
   for (int i = ilo; i <= ihi; i++) {
@@ -222,86 +215,38 @@ double PairCACBuck::init_one(int i, int j) {
 
 void PairCACBuck::init_style()
 {
-  check_existence_flags();
-
+  PairCAC::init_style();
   atom->max_neigh_inner_init = maxneigh_quad_inner = MAXNEIGHIN;
   atom->max_neigh_outer_init = maxneigh_quad_outer = MAXNEIGHOUT;
-  // need a full neighbor list
-
-  int irequest = neighbor->request(this,instance_me);
-  neighbor->requests[irequest]->half = 0;
-  //neighbor->requests[irequest]->full = 1;
-  neighbor->requests[irequest]->cac = 1;
 
 }
 
-//-----------------------------------------------------------------------
+/* ---------------------------------------------------------------------- */
 
 
 void PairCACBuck::force_densities(int iii, double s, double t, double w, double coefficients,
   double &force_densityx, double &force_densityy, double &force_densityz) {
 
   double delx,dely,delz;
-
-  double r2inv;
-  double r6inv;
   double shape_func;
   double shape_func2;
   int timestep=update->ntimestep;
-  double unit_cell_mapped[3];
-  double scanning_unit_cell[3];
   double *special_lj = force->special_lj;
-  double  forcebuck, factor_lj, fpair;
-  double r, rexp;
+  double  fpair;
   int *type = atom->type;
-  double unit_cell[3];
   double distancesq;
-  double current_position[3];
   double scan_position[3];
   double rcut;
-  int current_type = poly_counter;
   int nodes_per_element;
   int *nodes_count_list = atom->nodes_per_element_list;
-
-//equivalent isoparametric cutoff range for a cube of rcut
-
-  unit_cell_mapped[0] = 2 / double(current_element_scale[0]);
-  unit_cell_mapped[1] = 2 / double(current_element_scale[1]);
-  unit_cell_mapped[2] = 2 / double(current_element_scale[2]);
-
-  unit_cell[0] = s;
-  unit_cell[1] = t;
-  unit_cell[2] = w;
 
 //scan the surrounding unit cell locations in a cartesian grid
 //of isoparametric space until the cutoff is exceeded
 //for each grid scan
 
   int distanceflag=0;
-  current_position[0]=0;
-  current_position[1]=0;
-  current_position[2]=0;
-
-  if (!atomic_flag) {
-    nodes_per_element = nodes_count_list[current_element_type];
-    for (int kkk = 0; kkk < nodes_per_element; kkk++) {
-      shape_func = shape_function(unit_cell[0], unit_cell[1], unit_cell[2], 2, kkk + 1);
-      current_position[0] += current_nodal_positions[kkk][0] * shape_func;
-      current_position[1] += current_nodal_positions[kkk][1] * shape_func;
-      current_position[2] += current_nodal_positions[kkk][2] * shape_func;
-    }
-  }
-  else {
-    current_position[0] = s;
-    current_position[1] = t;
-    current_position[2] = w;
-  }
-
-
   rcut = cut_global_s;
   int origin_type = type_array[poly_counter];
-
-
   int listtype;
   int listindex;
   int poly_index;
@@ -312,61 +257,69 @@ void PairCACBuck::force_densities(int iii, double s, double t, double w, double 
   int **node_types = atom->node_types;
   int **inner_quad_indices = inner_quad_lists_index[pqi];
   double ****nodal_positions = atom->nodal_positions;
+  
+  //allocate arrays that store neighbor information around just this quadrature point
+  allocate_quad_memory();
+  //set virtual neighbor types, etc.
+  init_quad_arrays();
+  //interpolate virtual atom coordinates from shape functions corresponding to unit cells
+  interpolation(iii,s,t,w);
 
-    if(neigh_max>local_inner_max){
-      memory->grow(inner_neighbor_coords, neigh_max+EXPAND, 3, "Pair_CAC_buck:inner_neighbor_coords");
-      memory->grow(inner_neighbor_types, neigh_max+EXPAND, "Pair_CAC_buck:inner_neighbor_types");
-      local_inner_max=neigh_max+EXPAND;
+  //compute force at quadrature point
+  for (int l = 0; l < neigh_max; l++) {
+    scan_type = inner_neighbor_types[l];
+    scan_position[0] = inner_neighbor_coords[l][0];
+    scan_position[1] = inner_neighbor_coords[l][1];
+    scan_position[2] = inner_neighbor_coords[l][2];
+    delx = current_position[0] - scan_position[0];
+    dely = current_position[1] - scan_position[1];
+    delz = current_position[2] - scan_position[2];
+    distancesq = delx*delx + dely*dely + delz*delz;
+    if (distancesq < cut[origin_type][scan_type]* cut[origin_type][scan_type]) {
+      fpair = pair_interaction(distancesq, origin_type, scan_type);
+      force_densityx += delx*fpair;
+      force_densityy += dely*fpair;
+      force_densityz += delz*fpair;
+      if(atom->CAC_virial){
+        virial_density[0] += 0.5*delx*delx*fpair;
+        virial_density[1] += 0.5*dely*dely*fpair;
+        virial_density[2] += 0.5*delz*delz*fpair;
+        virial_density[3] += 0.5*delx*dely*fpair;
+        virial_density[4] += 0.5*delx*delz*fpair;
+        virial_density[5] += 0.5*dely*delz*fpair;
+      }
+      if (quad_eflag) {
+        quadrature_energy += (a[origin_type][scan_type]*rexp - c[origin_type][scan_type]*r6inv -
+        offset[origin_type][scan_type])/2;
+      }
+      //cac flux contribution due to current quadrature point and neighbor pair interactions
+      if(quad_flux_flag){
+        current_quad_flux(l,delx*fpair,dely*fpair,delz*fpair);
+      }
     }
-      for (int l = 0; l < neigh_max; l++){
-      element_index = inner_quad_indices[l][0];
-      poly_index = inner_quad_indices[l][1];
-      inner_neighbor_types[l] = node_types[element_index][poly_index];
-      }
-      //interpolate virtual atom coordinates from shape functions corresponding to unit cells
-      interpolation(iii);
+  }
+  //end of force density loop
+  
+  //additional cac flux contributions due to neighbors interacting with neighbors
+  //  in the vicinity of this quadrature point
+  if (quad_flux_flag) {
+    //compute_intersections();
+    quad_neigh_flux();
+  }
+}
 
-      //compute force at quadrature point
-      for (int l = 0; l < neigh_max; l++) {
-        scan_type = inner_neighbor_types[l];
-        scan_position[0] = inner_neighbor_coords[l][0];
-        scan_position[1] = inner_neighbor_coords[l][1];
-        scan_position[2] = inner_neighbor_coords[l][2];
-        delx = current_position[0] - scan_position[0];
-        dely = current_position[1] - scan_position[1];
-        delz = current_position[2] - scan_position[2];
-        distancesq = delx*delx + dely*dely + delz*delz;
-        if (distancesq < cut[origin_type][scan_type]* cut[origin_type][scan_type]) {
-          r2inv = 1.0 / distancesq;
-          r6inv = r2inv*r2inv*r2inv;
+/* ---------------------------------------------------------------------- */
 
-          r = sqrt(distancesq);
-          rexp = exp(-r*rhoinv[origin_type][scan_type]);
-          forcebuck = buck1[origin_type][scan_type] * r*rexp - buck2[origin_type][scan_type] * r6inv;
-          fpair = forcebuck*r2inv;
+double PairCACBuck::pair_interaction(double distancesq, int itype, int jtype) {
+  double fpair, forcebuck;
+  double r2inv, r;
 
-          force_densityx += delx*fpair;
-          force_densityy += dely*fpair;
-          force_densityz += delz*fpair;
-          if(atom->CAC_virial){
-          virial_density[0] += 0.5*delx*delx*fpair;
-          virial_density[1] += 0.5*dely*dely*fpair;
-          virial_density[2] += 0.5*delz*delz*fpair;
-          virial_density[3] += 0.5*delx*dely*fpair;
-          virial_density[4] += 0.5*delx*delz*fpair;
-          virial_density[5] += 0.5*dely*delz*fpair;
-          }
-          if (quad_eflag) {
-            quadrature_energy += (a[origin_type][scan_type]*rexp - c[origin_type][scan_type]*r6inv -
-            offset[origin_type][scan_type])/2;
-          }
-        }
-      }
+  r2inv = 1.0 / distancesq;
+  r6inv = r2inv*r2inv*r2inv;
 
-//end of scanning loop
-
-
- //induce segfault to debug
- //segv=force_density[133][209];
-
+  r = sqrt(distancesq);
+  rexp = exp(-r*rhoinv[itype][jtype]);
+  forcebuck = buck1[itype][jtype] * r*rexp - buck2[itype][jtype] * r6inv;
+  fpair = forcebuck*r2inv;
+  return fpair;
 }

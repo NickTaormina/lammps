@@ -15,7 +15,7 @@
 
 NBinStyle(cac,
           NBinCAC,
-          NB_CAC)
+          NB_STANDARD | NB_CAC)
 
 #else
 

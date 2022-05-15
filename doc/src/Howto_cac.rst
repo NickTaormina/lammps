@@ -31,25 +31,27 @@ discussed in detail in later sections of this Howto.
 
 Once the typical LAMMPS settings such as units, dimension, and boundary
 conditions have been specified in your input script,the CAC code can
-first be invoked via the :doc:`atom_style cac <atom_style>` command; in
+first be invoked via the :doc:`atom\_style cac <atom_style>` command; in
 addition to other CAC atom substyles that require charge etc. Please
 note that CAC atom styles take two input arguments, these are described
 in the atom style's specific page of the manual and later on.
 Afterwards the comm style must be set to "cac" in your input script, not
 doing so will generate an error message when using CAC pair styles.
 Once the CAC atom and Comm style has been set the model to be simulated
-must be read in with a typical :doc:`read_data <read_data>` command in
+must be read in with a typical :doc:`read\_data <read_data>` command in
 your input script. What is not typical however is the format in which a
 CAC model is declared in the data file to be read in. For an explicit
 example, please look in the /examples/USER/CAC folder or read the next
 sections of this Howto for more detailed input instructions.  Once the
 model has been read, the set of CAC specific pair styles, fixes,
-min_styles, computes, and dumps listed in the USER-CAC section of
+min\_styles, computes, and dumps listed in the USER-CAC section of
 :doc:`package details <Packages_details>` can be invoked to achieve your
 objectives; please see the example input scripts with several use cases
 in the /examples/USER/CAC folder.
 
+
 ----------
+
 
 **When to use the CAC method:**
 
@@ -78,7 +80,9 @@ finite element surfaces if the model is not well oriented and detailed,
 and can exhibit numerically induced instability on the system energy for
 certain dynamic simulations.
 
+
 ----------
+
 
 **The CAC data format:**
 
@@ -93,14 +97,15 @@ elements can then commence according to the format to be discussed.
 
 When declaring a CAC element or atom you must begin with the element header
 
+
 .. parsed-literal::
 
    element_id  element_string  iDOF_count size_1  size_2  size_3
 
 Where the element id is typically a global number 1-N (N being the total
-number of elements in your system), the element_string denotes what kind
+number of elements in your system), the element\_string denotes what kind
 of element is being declared with respect to its interpolation field and
-geometry. Currently only the "Eight_Node and Atom" strings are accepted
+geometry. Currently only the "Eight\_Node and Atom" strings are accepted
 here until other element types are implemented. The next number is the
 count of internal degrees of freedom this element possesses. The CAC
 method models materials according to the principles of lattice dynamics
@@ -111,7 +116,7 @@ number of degrees of freedom equal to the number of nodes multiplied by
 the number of internal degrees of freedom (atoms in the unit cell of
 such a material). The next three numbers denote the size of the finite
 element in terms of how many unit cells it is supposed to represent
-(note that this is very representative for an Eight_Node element but one
+(note that this is very representative for an Eight\_Node element but one
 or more of these may be a dummy input in the future for other element
 shapes like a sphere etc.). By convention, when specifying an atom with
 "Atom" as the element type the internal dof count and scale numbers are
@@ -121,7 +126,8 @@ After the element header is specified the information for each node/DOF
 of this element must be supplied. These specifications do depend on the
 CAC atom style used since you may have to specify something additional
 such as the charge associated with that DOF. We'll start with the
-example of declaring a subset of the nodes for an "Eight_Node" element:
+example of declaring a subset of the nodes for an "Eight\_Node" element:
+
 
 .. parsed-literal::
 
@@ -145,6 +151,7 @@ example of declaring a subset of the nodes for an "Eight_Node" element:
 
 The node/DOF format above follows the pattern:
 
+
 .. parsed-literal::
 
    node_index  iDOF_index  atom_type  *atom_type_properties*  x_pos  y_pos  z_pos
@@ -167,19 +174,22 @@ declare.
    first node for the range of internal DOFs and the second for the range
    etc. instead of the sorting used in the above example. Any other
    combination is also acceptable as long as you have supplied
-   number_of_nodes*number_of_iDOF entries.
+   number\_of\_nodes\*number\_of\_iDOF entries.
 
 While this establishes how to provide the information there remains a
 couple of details to explain about how to create CAC model geometries
 that work as intended.
 
+
 ----------
+
 
 **CAC atom styles list:**
 
 Currently all CAC atom styles have the same input arguments as show in
 the CAC atom style documented in :doc:`atom style <atom_style>`. The
 current list of CAC atom styles is:
+
 
 .. parsed-literal::
 
@@ -238,7 +248,9 @@ internal basis around that point.
    Otherwise you will create overlapping material between the model and its
    images.
 
+
 ----------
+
 
 **CAC elements and group definitions**
 
@@ -252,23 +264,27 @@ centroid; this is the average of the element's nodal positions.
    Elements are also considered owned by a task's subbox if the
    centroid is in that subbox.
 
+
 ----------
+
 
 **CAC Pair Styles, and Fixes:**
 
 The CAC method is implemented to run with its own version of Pair Styles
 and Fixes that come with the package.  The Pair Styles are named
 according to the interatomic potential that is used to define the force
-field in the convention of cac/potential_name. Likewise fixes, such as
-the typical nve integrator, are labeled cac/fix_name.
+field in the convention of cac/potential\_name. Likewise fixes, such as
+the typical nve integrator, are labeled cac/fix\_name.
 
 When invoking CAC Pair styles one can declare the potential parameters
-using :doc:`pair_coeff <pair_coeff>` just as they would for non-CAC pair
+using :doc:`pair\_coeff <pair_coeff>` just as they would for non-CAC pair
 styles of the respective potential. Examples of CAC pair styles
 currently implemented include :doc:`cac/buck <pair_cac_buck>`,
 :doc:`cac/eam <pair_cac_eam>`, and :doc:`cac/sw <pair_cac_sw>`.
 
+
 ----------
+
 
 **Running Multiple Resolutions in Parallel:**
 
@@ -282,7 +298,9 @@ scripts in /examples/USER/CAC of your LAMMPS directory or refer to the
 online documentation of fix balance and creating variables that call on
 computes.
 
+
 ----------
+
 
 **CAC output:**
 
@@ -310,3 +328,8 @@ The Journal of Chemical Physics 130, 134706, (2009).
 
 **(USER-CAC-Xu-et-al)** Xu, S., Xiong, L., Chen, Y. & McDowell, D. L. Sequential slip transfer of mixed-character dislocations across S3 coherent
 twin boundary in FCC metals: a concurrent atomistic-continuum study. npj Computational Materials 2, 15016 (2016).
+
+
+.. _lws: http://lammps.sandia.gov
+.. _ld: Manual.html
+.. _lc: Commands_all.html
