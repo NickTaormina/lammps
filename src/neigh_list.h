@@ -95,14 +95,14 @@ class NeighList : protected Pointers {
   int kokkos;    // 1 if list stores Kokkos data
   ExecutionSpace execution_space;
 
-  // USER-DPD package and Shardlow Splitting Algorithm (SSA) support
+  // DPD-REACT package and Shardlow Splitting Algorithm (SSA) support
 
   class NPair *np;    // ptr to NPair instance I depend on
 
   // methods
 
   NeighList(class LAMMPS *);
-  virtual ~NeighList();
+  ~NeighList() override;
   void post_constructor(class NeighRequest *);
   void setup_pages(int, int);    // setup page data structures
   void grow(int, int);           // grow all data structs

@@ -28,19 +28,18 @@ specify -m and optionally -e, order does not matter
 Examples:
 
 make lib-poems args="-m serial" # build POEMS lib with same settings as in the serial Makefile in src
-make lib-colvars args="-m mpi"  # build USER-COLVARS lib with same settings as in the mpi Makefile in src
+make lib-colvars args="-m mpi"  # build COLVARS lib with same settings as in the mpi Makefile in src
 make lib-meam args="-m ifort"   # build MEAM lib with custom Makefile.ifort (using Intel Fortran)
 """
 
 # settings
 
-version = "1.2.9"
+version = "1.3.2"
 url = "https://github.com/MolSSI-MDI/MDI_Library/archive/v%s.tar.gz" % version
 
 # known checksums for different MDI versions. used to validate the download.
 checksums = { \
-              '1.2.7' : '2f3177b30ccdbd6ae28ea3bdd5fed0db', \
-              '1.2.9' : 'ddfa46d6ee15b4e59cfd527ec7212184', \
+              '1.3.2' : '836f5da400d8cff0f0e4435640f9454f', \
               }
 
 # print error message or help
