@@ -34,6 +34,7 @@ using namespace LAMMPS_NS;
 
 AtomVecCAC::AtomVecCAC(LAMMPS *lmp) : AtomVec(lmp)
 {
+  //Test for git commit
   molecular = 0;
   mass_type = 1;
   element_type_count = 0;
