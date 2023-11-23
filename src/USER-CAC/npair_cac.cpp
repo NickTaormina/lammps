@@ -29,7 +29,7 @@
 
 #define MAXNEIGH  10
 #define EXPAND 50
-#define MAXBIN 100000
+#define MAXBIN 1000000
 using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
