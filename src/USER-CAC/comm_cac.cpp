@@ -231,8 +231,9 @@ void CommCAC::setup()
     subhi = domain->subhi;
   }
 
-    if (LAYOUT_NONUNIFORM==layout)
-    error->all(FLERR,"Can only use comm style CAC with brick and rcb decompositions");
+	// Allow the comm style CAC other than brick and rcb decompositions
+    //if (LAYOUT_NONUNIFORM==layout)
+    //error->all(FLERR,"Can only use comm style CAC with brick and rcb decompositions");
 
   int *periodicity = domain->periodicity;
 
@@ -2768,26 +2769,43 @@ void CommCAC::box_drop_brick_full(int idim, double *lo, double *hi, int &indexme
   // NOTE: this is not triclinic compatible
 
   int pbc_bit;
-  double subbox_size[3];
+  double subbox_size[3],split_lo[3],split_hi[3];
   double procbox_lo[3];
   double procbox_hi[3];
   int proc;
   double *split_array[3];
-  subbox_size[0]=subhi[0]-sublo[0];
-  subbox_size[1]=subhi[1]-sublo[1];
-  subbox_size[2]=subhi[2]-sublo[2];
+  //subbox_size[0]=subhi[0]-sublo[0];
+  //subbox_size[1]=subhi[1]-sublo[1];
+  //subbox_size[2]=subhi[2]-sublo[2];
   int xi[3],xf[3];
   split_array[0]=xsplit;
   split_array[1]=ysplit;
   split_array[2]=zsplit;
+  
+  /*
   for(int i=0; i<dimension; i++){
     xi[i]=static_cast<int> ((lo[i]-boxlo[i])/subbox_size[i]);
     xf[i]=static_cast<int> ((hi[i]-boxlo[i])/subbox_size[i]);
-
     if(xf[i]==procgrid[i]) xf[i]=procgrid[i]-1;
     if(xi[i]<0) xi[i]=0;
   }
-
+  */
+	// This part allows the non-uniform procgrid (by Yang Li)
+  for(int i=0; i<dimension; i++){
+	split_lo[i] = (lo[i]-boxlo[i])/prd[i];
+	split_hi[i] = (hi[i]-boxlo[i])/prd[i];
+	xi[i]=0;
+	xf[i]=0;
+	for (int j=0; j<procgrid[i]; j++){
+		if (split_lo[i] >= split_array[i][j] && split_lo[i] < split_array[i][j+1]) xi[i]=j;
+		if (split_hi[i] >= split_array[i][j] && split_hi[i] < split_array[i][j+1]) xf[i]=j;
+		}
+	if(xi[i]>=procgrid[i]-1) xi[i]=procgrid[i]-1;
+	if(xf[i]>=procgrid[i]-1) xf[i]=procgrid[i]-1;
+	if (split_hi[i] == 1) xf[i]=procgrid[i]-1;	
+	}
+	//
+	
     for(int x=xi[0]; x<=xf[0]; x++){
       for(int y=xi[1]; y<=xf[1]; y++){
         for(int z=xi[2]; z<=xf[2]; z++){
