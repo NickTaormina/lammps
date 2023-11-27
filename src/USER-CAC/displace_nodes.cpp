@@ -34,11 +34,12 @@
 #include "math_extra.h"
 #include "memory.h"
 #include "error.h"
+#define PI 3.14159265
 
 using namespace LAMMPS_NS;
 using namespace MathConst;
 
-enum{MOVE,RAMP,RANDOM,ROTATE};
+enum{MOVE,RAMP,RANDOM,ROTATE,DISLOCATION,DOUBLEDISLOCATION};
 
 /* ---------------------------------------------------------------------- */
 
@@ -81,6 +82,8 @@ void DisplaceNodes::command(int narg, char **arg)
   int style = -1;
   if (strcmp(arg[1],"move") == 0) style = MOVE;
   else if (strcmp(arg[1],"ramp") == 0) style = RAMP;
+  else if (strcmp(arg[1],"dislocation") == 0) style = DISLOCATION;
+  else if (strcmp(arg[1],"doubledislocation") == 0) style = DOUBLEDISLOCATION;																			  
   else error->all(FLERR,"Illegal displace_nodes command");
 
   // set option defaults
@@ -91,6 +94,8 @@ void DisplaceNodes::command(int narg, char **arg)
 
   if (style == MOVE) options(narg-5,&arg[5]);
   else if (style == RAMP) options(narg-8,&arg[8]);
+  else if (style == DISLOCATION) options(narg-11,&arg[11]);
+  else if (style == DOUBLEDISLOCATION) options(narg-13,&arg[13]);																 
 
 
   // setup scaling
@@ -181,7 +186,237 @@ void DisplaceNodes::command(int narg, char **arg)
       }
     }
   }
+ // move nodes in displacement field
+								
+							
+															
 
+  if (style == DISLOCATION) {
+					  
+											
+							  
+				   
+													   
+
+    int ndisl = utils::numeric(FLERR,arg[2],false,lmp);;  //number of dislocations
+	double spacing1 = utils::numeric(FLERR,arg[3],false,lmp);; //number of unit cells between dislocation core;	
+	double spacing2 = utils::numeric(FLERR,arg[4],false,lmp);; //number of unit cells between dislocation core;	
+
+    double be = utils::numeric(FLERR,arg[5],false,lmp);;   //edge burgers vector component;
+    double bs = utils::numeric(FLERR,arg[6],false,lmp);;   //screw burgers vector component;
+	double core1 = utils::numeric(FLERR,arg[7],false,lmp);;
+	double core2 = utils::numeric(FLERR,arg[8],false,lmp);;
+	double mu = utils::numeric(FLERR,arg[9],false,lmp);;
+	double rot_theta = utils::numeric(FLERR,arg[10],false,lmp);;
+    double u1=0,u2=0,u3=0;
+    double **x = atom->x;
+    int *mask = atom->mask;
+    int nlocal = atom->nlocal;
+    double ****nodal_positions = atom->nodal_positions;
+    int *element_type = atom->element_type;
+    int *npoly = atom->poly_count;
+    int **node_types = atom->node_types;
+    int *nodes_count_list = atom->nodes_per_element_list;
+    int nodes_per_element;
+    double tu1;
+	double tu2;
+	double tu3;
+    for (i = 0; i < nlocal; i++) {
+      if (mask[i] & groupbit) {
+        x[i][0] = 0;
+        x[i][1] = 0;
+        x[i][2] = 0;
+
+		  
+		  
+          nodes_per_element = nodes_count_list[element_type[i]];
+          for (int ip = 0; ip < npoly[i]; ip++) {	
+            for(int in=0; in<nodes_per_element; in++){
+				tu1=0;
+				tu2=0;
+				tu3=0;
+			 for(int n=0;n<ndisl;n++){	
+
+
+
+
+	          double core1r=core1+n*spacing1;   
+              double core2r=core2+n*spacing2;
+              double pxn=nodal_positions[i][ip][in][0]-core1r;
+              double pyn=nodal_positions[i][ip][in][1]-core2r;
+              double pxnr=pxn*cos(rot_theta)+pyn*sin(rot_theta);		  
+              double pynr=-pxn*sin(rot_theta)+pyn*cos(rot_theta);		  
+				  
+			  double rsq=pxnr*pxnr+pynr*pynr;
+			  double theta=atan2(pynr,pxnr);
+			  if(theta<0)
+			  theta+=2*PI; //convert from [-PI:PI]to [0:2PI];
+
+
+              u1 = be/2/PI * (theta + pxnr*pynr/(2.0*(1-mu)*rsq));
+              u2 = -be/8/PI/(1-mu)*((1-2*mu)*log(rsq)+(pxnr*pxnr-pynr*pynr)/rsq); 
+			  u3 = bs/2/PI * theta;
+			  double u1r=cos((rot_theta))*u1-sin((rot_theta))*u2;
+			  double u2r=cos((rot_theta))*u2+sin((rot_theta))*u1;
+              tu1+=u1r;
+			  tu2+=u2r;
+			  tu3+=u3;
+
+			 }
+              nodal_positions[i][ip][in][0] += tu1;
+              nodal_positions[i][ip][in][1] += tu2;
+              nodal_positions[i][ip][in][2] += tu3;			 
+              x[i][0] += nodal_positions[i][ip][in][0];
+              x[i][1] += nodal_positions[i][ip][in][1];
+              x[i][2] += nodal_positions[i][ip][in][2];
+            }
+          }
+          x[i][0] = x[i][0] / nodes_per_element / npoly[i];
+          x[i][1] = x[i][1] / nodes_per_element / npoly[i];
+          x[i][2] = x[i][2] / nodes_per_element / npoly[i];
+		  
+		  
+		  
+		  
+        
+      }
+    }
+  }
+
+
+
+
+ // move nodes in double dislocation displacement field
+
+  if (style == DOUBLEDISLOCATION) {
+
+    int ndisl = utils::numeric(FLERR,arg[2],false,lmp);;  //number of dislocations
+	double spacing1 = utils::numeric(FLERR,arg[3],false,lmp);; //number of unit cells between dislocation core;	
+	double spacing2 = utils::numeric(FLERR,arg[4],false,lmp);; //number of unit cells between dislocation core;	
+
+    double be = utils::numeric(FLERR,arg[5],false,lmp);;   //edge burgers vector component;
+    double bs = utils::numeric(FLERR,arg[6],false,lmp);;   //screw burgers vector component;
+	double core1 = utils::numeric(FLERR,arg[7],false,lmp);;
+	double core2 = utils::numeric(FLERR,arg[8],false,lmp);;
+	double mu = utils::numeric(FLERR,arg[9],false,lmp);;
+	double rot_theta = utils::numeric(FLERR,arg[10],false,lmp);;
+	double anocore1 = utils::numeric(FLERR,arg[11],false,lmp);;
+
+	double rot_theta1 = utils::numeric(FLERR,arg[12],false,lmp);;
+
+    double u1=0,u2=0,u3=0;
+    double **x = atom->x;
+    int *mask = atom->mask;
+    int nlocal = atom->nlocal;
+    double ****nodal_positions = atom->nodal_positions;
+    int *element_type = atom->element_type;
+    int *npoly = atom->poly_count;
+    int **node_types = atom->node_types;
+    int *nodes_count_list = atom->nodes_per_element_list;
+    int nodes_per_element;
+    double tu1;
+	double tu2;
+	double tu3;
+    for (i = 0; i < nlocal; i++) {
+      if (mask[i] & groupbit) {
+        x[i][0] = 0;
+        x[i][1] = 0;
+        x[i][2] = 0;
+
+		  
+		  
+          nodes_per_element = nodes_count_list[element_type[i]];
+          for (int ip = 0; ip < npoly[i]; ip++) {	
+            for(int in=0; in<nodes_per_element; in++){
+				tu1=0;
+				tu2=0;
+				tu3=0;
+			 for(int n=0;n<ndisl;n++){	
+
+
+
+
+	          double core1r=core1+n*spacing1;   
+              double core2r=core2+n*spacing2;
+              double pxn=nodal_positions[i][ip][in][0]-core1r;
+              double pyn=nodal_positions[i][ip][in][1]-core2r;
+              double pxnr=pxn*cos(rot_theta)+pyn*sin(rot_theta);		  
+              double pynr=-pxn*sin(rot_theta)+pyn*cos(rot_theta);		  
+				  
+			  double rsq=pxnr*pxnr+pynr*pynr;
+			  double theta=atan2(pynr,pxnr);
+			  if(theta<0)
+			  theta+=2*PI; //convert from [-PI:PI]to [0:2PI];
+
+
+              u1 = be/2/PI * (theta + pxnr*pynr/(2.0*(1-mu)*rsq));
+              u2 = -be/8/PI/(1-mu)*((1-2*mu)*log(rsq)+(pxnr*pxnr-pynr*pynr)/rsq); 
+			  u3 = bs/2/PI * theta;
+			  double u1r=cos((rot_theta))*u1-sin((rot_theta))*u2;
+			  double u2r=cos((rot_theta))*u2+sin((rot_theta))*u1;
+              tu1+=u1r;
+			  tu2+=u2r;
+			  tu3+=u3;
+
+			 }
+			 
+			 for(int n=0;n<ndisl;n++){	
+
+
+
+
+	          double core1r=anocore1-n*spacing1;   
+              double core2r=core2+n*spacing2;
+              double pxn=nodal_positions[i][ip][in][0]-core1r;
+              double pyn=nodal_positions[i][ip][in][1]-core2r;
+              double pxnr=pxn*cos(rot_theta1)+pyn*sin(rot_theta1);		  
+              double pynr=-pxn*sin(rot_theta1)+pyn*cos(rot_theta1);		  
+				  
+			  double rsq=pxnr*pxnr+pynr*pynr;
+			  double theta=atan2(pynr,pxnr);
+			  if(theta<0)
+			  theta+=2*PI; //convert from [-PI:PI]to [0:2PI];
+
+
+              u1 = be/2/PI * (theta + pxnr*pynr/(2.0*(1-mu)*rsq));
+              u2 = -be/8/PI/(1-mu)*((1-2*mu)*log(rsq)+(pxnr*pxnr-pynr*pynr)/rsq); 
+			  u3 = bs/2/PI * theta;
+			  double u1r=cos((rot_theta1))*u1-sin((rot_theta1))*u2;
+			  double u2r=cos((rot_theta1))*u2+sin((rot_theta1))*u1;
+              tu1-=u1r;
+			  tu2-=u2r;
+			  tu3-=u3;
+
+			 }			 
+			 
+			 
+			 
+			 
+			 
+			 
+			 
+              nodal_positions[i][ip][in][0] += tu1;
+              nodal_positions[i][ip][in][1] += tu2;
+              nodal_positions[i][ip][in][2] += tu3;			 
+              x[i][0] += nodal_positions[i][ip][in][0];
+              x[i][1] += nodal_positions[i][ip][in][1];
+              x[i][2] += nodal_positions[i][ip][in][2];
+            }
+          }
+          x[i][0] = x[i][0] / nodes_per_element / npoly[i];
+          x[i][1] = x[i][1] / nodes_per_element / npoly[i];
+          x[i][2] = x[i][2] / nodes_per_element / npoly[i];
+		  
+		  
+		  
+		  
+        
+      }
+    }
+  }
+
+
+  
 
   // move atoms back inside simulation box and to new processors
   // use remap() instead of pbc() in case atoms moved a long distance
