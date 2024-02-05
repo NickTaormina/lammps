@@ -116,6 +116,7 @@ class AtomVecCAC : public AtomVec {
       return false;
     }
   };
+
   std::map<NodeCoord, std::vector<int>> connected_map;
 
   double evaluate_check(double x1, double x2, double x3);

@@ -395,9 +395,9 @@ Atom::~Atom()
   memory->destroy(min_v);
   memory->destroy(min_f);
   //connected mesh
-  memory->destroy(connected_corners);
-  memory->destroy(connected_elements);
-  memory->destroy(nodal_indices);
+  memory->sfree(connected_corners);
+  memory->sfree(connected_elements);
+  memory->sfree(nodal_indices);
 
   // delete mapping data structures
 
