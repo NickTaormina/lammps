@@ -13,7 +13,7 @@
 
 #ifdef ATOM_CLASS
 
-AtomStyle(cac,AtomVecCAC)
+AtomStyle(cac, AtomVecCAC)
 
 #else
 
@@ -21,6 +21,7 @@ AtomStyle(cac,AtomVecCAC)
 #define LMP_ATOM_VEC_CAC_H
 
 #include "atom_vec.h"
+#include <map>
 
 namespace LAMMPS_NS {
 
@@ -28,7 +29,7 @@ class AtomVecCAC : public AtomVec {
  public:
   //minimization algorithm structs for neighbor rebuild checks
   class Asa_Data *asa_pointer;
-  //variables for Asa_Data to obtain    
+  //variables for Asa_Data to obtain
   double ****hold_nodal_positions;
   double ****check_nodal_positions;
   int poly_min;
@@ -63,27 +64,26 @@ class AtomVecCAC : public AtomVec {
   virtual void write_data(FILE *, int, double **);
   virtual double memory_usage();
   virtual void force_clear(int, size_t);
-  virtual int check_distance_function(double deltasq); //specific neighbor rebuild check function 
-  virtual void set_hold_properties(); //sets nodal positions at reneighboring step for comparison
+  virtual int check_distance_function(double deltasq);    //specific neighbor rebuild check function
+  virtual void set_hold_properties();    //sets nodal positions at reneighboring step for comparison
   virtual void shrink_array(int);
 
-
-  virtual double shape_function(double, double, double,int,int);
-  virtual double shape_function_derivative(double, double, double,int,int,int);
+  virtual double shape_function(double, double, double, int, int);
+  virtual double shape_function_derivative(double, double, double, int, int, int);
   virtual void init();
 
  protected:
   tagint *tag;
-  int *type,*mask;
+  int *type, *mask;
   imageint *image;
-  int nodes_per_element, maxpoly; //maximum number of nodes and atoms per unit cell per element in model
-  double **x,**v,**f;
-  double ****nodal_positions,****nodal_velocities,****nodal_forces,
-    ****nodal_gradients, ****initial_nodal_positions, *scale_search_range;
+  int nodes_per_element,
+      maxpoly;    //maximum number of nodes and atoms per unit cell per element in model
+  double **x, **v, **f;
+  double ****nodal_positions, ****nodal_velocities, ****nodal_forces, ****nodal_gradients,
+      ****initial_nodal_positions, *scale_search_range, ***nodal_indices;
   double ****nodal_virial;
-  int *poly_count, **node_types, *element_type,
-	  **element_scale, scale_count, oneflag, *scale_list;
-  char **element_names;  
+  int *poly_count, **node_types, *element_type, **element_scale, scale_count, oneflag, *scale_list;
+  char **element_names;
   int element_type_count;
   int search_range_max;
   int initial_size;
@@ -92,18 +92,44 @@ class AtomVecCAC : public AtomVec {
   int *node_count_per_poly;
   int CAC_nmax;
   int alloc_counter;
+  int **connected_nodes;
+  bool connected_nodes_bool;
+
+  struct NodeInfo {
+    int atomIndex;
+    int polyIndex;
+    int nodeIndex;
+  };
+  struct NodeCoord {
+    int x;
+    int y;
+    int z;
+
+    //comparison operator for the map
+    bool operator<(const NodeCoord &other) const
+    {
+      if (x < other.x) return true;
+      if (x > other.x) return false;
+      if (y < other.y) return true;
+      if (y > other.y) return false;
+      if (z < other.z) return true;
+      return false;
+    }
+  };
+  std::map<NodeCoord, std::vector<int>> connected_map;
 
   double evaluate_check(double x1, double x2, double x3);
   virtual void define_elements();
-  virtual void allocate_element(int,int,int);
+  virtual void allocate_element(int, int, int);
+  virtual void build_node_connectivity();
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif
 
-/* ERROR/WARNING messages:
+    /* ERROR/WARNING messages:
 
 E: Invalid atom_style cac command
 

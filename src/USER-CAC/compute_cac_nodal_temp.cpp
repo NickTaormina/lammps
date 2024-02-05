@@ -11,25 +11,34 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <cstring>
-#include <mpi.h>
 #include "compute_cac_nodal_temp.h"
 #include "atom.h"
-#include "update.h"
-#include "force.h"
-#include "domain.h"
 #include "comm.h"
-#include "group.h"
+#include "domain.h"
 #include "error.h"
+#include "force.h"
+#include "group.h"
+#include "update.h"
+#include <cstring>
+#include <mpi.h>
+
+#include <iostream>
 
 using namespace LAMMPS_NS;
 
+#include <iostream>
+#include <map>
+#include <sstream>
+#include <string>
+#include <vector>
+
+// Define a structure to hold node information
+
 /* ---------------------------------------------------------------------- */
 
-ComputeNodalTemp::ComputeNodalTemp(LAMMPS *lmp, int narg, char **arg) :
-  Compute(lmp, narg, arg)
+ComputeNodalTemp::ComputeNodalTemp(LAMMPS *lmp, int narg, char **arg) : Compute(lmp, narg, arg)
 {
-  if (narg != 3) error->all(FLERR,"Illegal compute temp command");
+  if (narg != 3) error->all(FLERR, "Illegal compute temp command");
 
   scalar_flag = 1;
   extscalar = 0;
@@ -42,15 +51,14 @@ ComputeNodalTemp::ComputeNodalTemp(LAMMPS *lmp, int narg, char **arg) :
 
 ComputeNodalTemp::~ComputeNodalTemp()
 {
-  if (!copymode)
-    delete [] vector;
+  if (!copymode) delete[] vector;
 }
 
 /* ---------------------------------------------------------------------- */
 
 void ComputeNodalTemp::setup()
 {
-  if (!atom->CAC_flag) error->all(FLERR,"compute cac/nodal/temp requires a CAC atom style");
+  if (!atom->CAC_flag) error->all(FLERR, "compute cac/nodal/temp requires a CAC atom style");
   dynamic = 0;
   if (dynamic_user || group->dynamic[igroup]) dynamic = 1;
   dof_compute();
@@ -64,8 +72,10 @@ void ComputeNodalTemp::dof_compute()
   natoms_temp = group->count(igroup);
   dof = domain->dimension * natoms_temp;
   dof -= extra_dof + fix_dof;
-  if (dof > 0.0) tfactor = force->mvv2e / (dof * force->boltz);
-  else tfactor = 0.0;
+  if (dof > 0.0)
+    tfactor = force->mvv2e / (dof * force->boltz);
+  else
+    tfactor = 0.0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -98,44 +108,45 @@ double ComputeNodalTemp::compute_scalar()
 
     for (int i = 0; i < nlocal; i++) {
 
-        if (mask[i] & groupbit){
-           nodes_per_element = nodes_count_list[element_type[i]];
-          for (int ipoly = 0; ipoly < poly_count[i]; ipoly++)
-            for (int n = 0; n < nodes_per_element; n++)
-              t += (nodal_velocities[i][ipoly][n][0] * nodal_velocities[i][ipoly][n][0]
-                + nodal_velocities[i][ipoly][n][1] * nodal_velocities[i][ipoly][n][1]
-                + nodal_velocities[i][ipoly][n][2] * nodal_velocities[i][ipoly][n][2])
-              * rmass[i] / nodes_per_element / poly_count[i];
-        }
+      if (mask[i] & groupbit) {
+        nodes_per_element = nodes_count_list[element_type[i]];
+        for (int ipoly = 0; ipoly < poly_count[i]; ipoly++)
+          for (int n = 0; n < nodes_per_element; n++)
+            t += (nodal_velocities[i][ipoly][n][0] * nodal_velocities[i][ipoly][n][0] +
+                  nodal_velocities[i][ipoly][n][1] * nodal_velocities[i][ipoly][n][1] +
+                  nodal_velocities[i][ipoly][n][2] * nodal_velocities[i][ipoly][n][2]) *
+                rmass[i] / nodes_per_element / poly_count[i];
+      }
     }
-  }
-  else {
+  } else {
 
     for (int i = 0; i < nlocal; i++) {
 
-        if (mask[i] & groupbit){
-         nodes_per_element = nodes_count_list[element_type[i]];
-          for (int ipoly = 0; ipoly < poly_count[i]; ipoly++)
-            for (int n = 0; n < nodes_per_element; n++)
-              t += (nodal_velocities[i][ipoly][n][0] * nodal_velocities[i][ipoly][n][0]
-                + nodal_velocities[i][ipoly][n][1] * nodal_velocities[i][ipoly][n][1]
-                + nodal_velocities[i][ipoly][n][2] * nodal_velocities[i][ipoly][n][2])*
-              mass[node_types[i][ipoly]] / nodes_per_element / poly_count[i];
-        }
+      if (mask[i] & groupbit) {
+        nodes_per_element = nodes_count_list[element_type[i]];
+        for (int ipoly = 0; ipoly < poly_count[i]; ipoly++)
+          for (int n = 0; n < nodes_per_element; n++)
+            t += (nodal_velocities[i][ipoly][n][0] * nodal_velocities[i][ipoly][n][0] +
+                  nodal_velocities[i][ipoly][n][1] * nodal_velocities[i][ipoly][n][1] +
+                  nodal_velocities[i][ipoly][n][2] * nodal_velocities[i][ipoly][n][2]) *
+                mass[node_types[i][ipoly]] / nodes_per_element / poly_count[i];
+      }
     }
   }
 
-  MPI_Allreduce(&t,&scalar,1,MPI_DOUBLE,MPI_SUM,world);
+  MPI_Allreduce(&t, &scalar, 1, MPI_DOUBLE, MPI_SUM, world);
   old_dof = dof;
-  if (dynamic) dof_compute();
-  else{
+  if (dynamic)
     dof_compute();
-    if(old_dof!=dof) error->all(FLERR,"Temperature compute dofs are changing; use a dynamic group or check for lost atoms");
+  else {
+    dof_compute();
+    if (old_dof != dof)
+      error->all(
+          FLERR,
+          "Temperature compute dofs are changing; use a dynamic group or check for lost atoms");
   }
   if (dof < 0.0 && natoms_temp > 0.0)
-    error->all(FLERR,"Temperature compute degrees of freedom < 0");
+    error->all(FLERR, "Temperature compute degrees of freedom < 0");
   scalar *= tfactor;
   return scalar;
 }
-
-

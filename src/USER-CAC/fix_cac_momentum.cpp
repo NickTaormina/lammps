@@ -120,7 +120,7 @@ void FixCACMomentum::end_of_step()
   for (int i = 0; i < nlocal; i++)
   for (int ipoly = 0; ipoly < poly_count[i]; ipoly++)
     if (mask[i] & groupbit){
-      if(element_type[i]==1)
+      if(element_type[i]==1 || element_type[i]==3)
       one += mass[node_types[i][ipoly]]*element_scale[i][0]*element_scale[i][1]*element_scale[i][2];
       if(element_type[i]==0)
       one += mass[node_types[i][ipoly]];
@@ -139,7 +139,7 @@ void FixCACMomentum::end_of_step()
     double shape_func;
     for (int i = 0; i < nlocal; i++)
       if (mask[i] & groupbit) {
-        if(element_type[i]==1){
+        if(element_type[i]==1 || element_type[i]==3){
         nodes_per_element = nodes_count_list[element_type[i]];
         unit_cell_mapped[0] = 2 / double(element_scale[i][0]);
         unit_cell_mapped[1] = 2 / double(element_scale[i][1]);
@@ -204,7 +204,7 @@ void FixCACMomentum::end_of_step()
     double shape_func;
     for (int i = 0; i < nlocal; i++)
       if (mask[i] & groupbit) {
-        if(element_type[i]==1){
+        if(element_type[i]==1 || element_type[i]==3){
         nodes_per_element = nodes_count_list[element_type[i]];
         unit_cell_mapped[0] = 2 / double(element_scale[i][0]);
         unit_cell_mapped[1] = 2 / double(element_scale[i][1]);
@@ -245,7 +245,7 @@ void FixCACMomentum::end_of_step()
     c[0] = c[1] = c[2] = 0.0;
     for (int i = 0; i < nlocal; i++)
       if (mask[i] & groupbit) {
-        if(element_type[i]==1){
+        if(element_type[i]==1 || element_type[i]==3){
         nodes_per_element = nodes_count_list[element_type[i]];
         unit_cell_mapped[0] = 2 / double(element_scale[i][0]);
         unit_cell_mapped[1] = 2 / double(element_scale[i][1]);
@@ -301,7 +301,7 @@ void FixCACMomentum::end_of_step()
       ione[ii][jj] = 0.0;
     for (int i = 0; i < nlocal; i++)
       if (mask[i] & groupbit) {
-        if(element_type[i]==1){
+        if(element_type[i]==1 || element_type[i]==3){
         nodes_per_element = nodes_count_list[element_type[i]];
         unit_cell_mapped[0] = 2 / double(element_scale[i][0]);
         unit_cell_mapped[1] = 2 / double(element_scale[i][1]);

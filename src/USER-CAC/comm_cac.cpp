@@ -1137,6 +1137,8 @@ void CommCAC::forward_comm(int /*dummy*/)
    for triclinic, atoms must be in lamda coords (0-1) before exchange is called
 ------------------------------------------------------------------------- */
 
+//connected mesh TODO
+
 void CommCAC::exchange()
 {
   int i,m,nexch,nsend,nrecv,nlocal,proc,offset;
@@ -1362,7 +1364,7 @@ void CommCAC::compute_eboxes(int mode){
   ebox_ref=memory->grow(atom->ebox_ref,atom->nlocal+atom->nghost,"commCAC: ebox_ref");
   //find maximum element overlap length in each swap direction
   for(int element_index=0; element_index<elimit; element_index++){
-    if(element_type[element_index]){
+    if(element_type[element_index] == 1 || element_type[element_index] == 3){
     nodal_positions = atom->nodal_positions[element_index];
     //int current_poly_count = poly_count[element_index];
     int current_poly_count = poly_count[element_index];
@@ -1850,6 +1852,9 @@ void CommCAC::overlap_element_comm(int iswap){
    this routine is called before every reneighboring
    for triclinic, atoms must be in lamda coords (0-1) before borders is called
 ------------------------------------------------------------------------- */
+
+
+//maybe connected mesh TODO
 
 void CommCAC::borders()
 {
@@ -2544,7 +2549,7 @@ int CommCAC::sendbox_include(int iswap, int m, int current_element)
   eoboxhi[2]=oboxhi[2]+cut+BOXEPSILON;
 
   //determine if current element ebox or point particle position overlaps or lies in cutghost sendbox
-  if(!element_type[current_element]){
+  if(!(element_type[current_element] == 1 || element_type[current_element] == 3)){
     if (x[current_element][0] >= xlo && x[current_element][0] < xhi &&
         x[current_element][1] >= ylo && x[current_element][1] < yhi &&
         x[current_element][2] >= zlo && x[current_element][2] < zhi) return 1;
@@ -2657,7 +2662,7 @@ int CommCAC::sendbox_include(int iswap, int m, int current_element)
       exp_ebox[4]=foreign_eboxes[iebox][4];
       exp_ebox[5]=foreign_eboxes[iebox][5];
       
-      if(!element_type[current_element]){
+      if(!(element_type[current_element] == 1 || element_type[current_element] == 3)){
         xtest[0] = x[current_element][0];
         xtest[1] = x[current_element][1];
         xtest[2] = x[current_element][2];

@@ -173,6 +173,7 @@ Atom::Atom(LAMMPS *lmp) : Pointers(lmp)
   
   nodal_positions = NULL;
   initial_nodal_positions = NULL;
+  connected_nodes = NULL;
   nodal_velocities = NULL;
   nodal_forces = NULL;
   poly_count = NULL;
@@ -207,6 +208,10 @@ Atom::Atom(LAMMPS *lmp) : Pointers(lmp)
   element_type_count = dense_count = weight_count = 0;
   outer_neigh_flag = ghost_quad_flag = full_quad_flag = cac_flux_flag = flux_compute = 0;
   interface_quadrature = 1;
+  //connected mesh
+  connected_corners = NULL;
+  connected_elements = NULL;
+  nodal_indices = NULL;
 
   // USER-DPD package
 
@@ -372,6 +377,7 @@ Atom::~Atom()
   //delete USER-CAC arrays
   memory->sfree(nodal_positions);
   memory->sfree(initial_nodal_positions);
+  memory->sfree(connected_nodes);
   memory->sfree(nodal_velocities);
   memory->sfree(nodal_forces);
   memory->destroy(poly_count);
@@ -388,6 +394,10 @@ Atom::~Atom()
   memory->destroy(min_x);
   memory->destroy(min_v);
   memory->destroy(min_f);
+  //connected mesh
+  memory->destroy(connected_corners);
+  memory->destroy(connected_elements);
+  memory->destroy(nodal_indices);
 
   // delete mapping data structures
 

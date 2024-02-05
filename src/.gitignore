@@ -4,6 +4,9 @@
 /Make.py.last
 /lmp_*
 
+test_simulation/
+/stAfftCH
+
 /style_*.h
 /packages_*.h
 /lmpinstalledpkgs.h

@@ -201,7 +201,7 @@ void NBinCAC::CAC_setup_bins(int style)
   //loop through elements to compute bounding boxes and test
   //whether they should stretch the local bounding box
   for(int element_index=0; element_index < atom->nlocal; element_index++){
-  if(element_type[element_index]){
+  if(element_type[element_index] == 1 || element_type[element_index]==3){
   nodal_positions = atom->nodal_positions[element_index];
 
   double *current_ebox;
@@ -253,7 +253,7 @@ void NBinCAC::CAC_setup_bins(int style)
   //loop through elements to compute bounding boxes and test
   //whether they should stretch the local bounding box
   for(int element_index=0; element_index < atom->nlocal; element_index++){
-  if(element_type[element_index]){
+  if(element_type[element_index] == 1 || element_type[element_index] == 3){
   nodal_positions = atom->nodal_positions[element_index];
 
   double *current_ebox;
@@ -301,7 +301,7 @@ void NBinCAC::CAC_setup_bins(int style)
   //only use if greater than half the force cutoff radius
   double average_size=0;
   for(int element_index=0; element_index < atom->nlocal+atom->nghost; element_index++){
-    if(element_type[element_index]){
+    if(element_type[element_index] == 1 || element_type[element_index]==3){
     double *current_ebox;
 
     current_ebox = eboxes[ebox_ref[element_index]];
@@ -681,7 +681,7 @@ if (x[2] > bsubboxhi[2])
   else decision_flag=element_type[element_index];
 
   //calculate the set of bins this element's bounding box overlaps
-  if(decision_flag){
+  if(decision_flag == 1 || decision_flag == 3){
 
   double *current_ebox;
   if(!foreign_boxes)
