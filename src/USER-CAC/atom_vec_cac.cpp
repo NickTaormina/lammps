@@ -59,7 +59,7 @@ AtomVecCAC::AtomVecCAC(LAMMPS *lmp) : AtomVec(lmp)
   CAC_nmax = 0;
   alloc_counter = 0;
 
-  connected_nodes_bool = true;
+  connected_nodes_bool = false;
 
   //instance asa interface object
   asa_pointer = new Asa_Data(lmp, this);
@@ -1585,6 +1585,7 @@ void AtomVecCAC::data_atom(double *coord, imageint imagetmp, char **values)
       type_found = 1;
       element_type[nlocal] = string_check;
       nodetotal = nodes_count_list[string_check];
+      if (string_check == 3) { connected_nodes_bool = true; }
       poly_count[nlocal] = npoly;
       element_scale[nlocal][0] = utils::inumeric(FLERR, values[3], true, lmp);
       element_scale[nlocal][1] = utils::inumeric(FLERR, values[4], true, lmp);

@@ -16,6 +16,9 @@ uf3_triplet_bspline::uf3_triplet_bspline(
   knot_matrix = uknot_matrix;
   coeff_matrix = ucoeff_matrix;
 
+  //initialize ret_val to 0
+  for (int i = 0; i < 4; i++) ret_val[i] = 0;
+
   knot_vect_size_ij = knot_matrix[2].size();
   knot_vect_size_ik = knot_matrix[1].size();
   knot_vect_size_jk = knot_matrix[0].size();
@@ -118,12 +121,69 @@ uf3_triplet_bspline::~uf3_triplet_bspline() {}
 // Evaluate 3D B-Spline value
 double *uf3_triplet_bspline::eval(double value_rij, double value_rik, double value_rjk)
 {
-
   // Find starting knots
+  if (value_rij < 0 || value_rik < 0 || value_rjk < 0) {
+    std::cout << "Error: Negative value" << std::endl;
+    std::cout << "value_rij: " << value_rij << " value_rik: " << value_rik
+              << " value_rjk: " << value_rjk << std::endl;
+    return ret_val;
+  }
+
+  if (knot_matrix.size() < 3) {
+    std::cout << "Error: knot_matrix size is not 3" << std::endl;
+    return ret_val;
+  }
+
+  if (knot_matrix[2].size() < knot_vect_size_ij || knot_matrix[1].size() < knot_vect_size_ik ||
+      knot_matrix[0].size() < knot_vect_size_jk) {
+    std::cout << "Error: knot_matrix size is smaller than knot_vect_size" << std::endl;
+    return ret_val;
+  }
 
   int iknot_ij = starting_knot(knot_matrix[2], knot_vect_size_ij, value_rij) - 3;
   int iknot_ik = starting_knot(knot_matrix[1], knot_vect_size_ik, value_rik) - 3;
   int iknot_jk = starting_knot(knot_matrix[0], knot_vect_size_jk, value_rjk) - 3;
+
+  // Make sure the starting knot is within the range
+  if (iknot_ij < 0 || iknot_ik < 0 || iknot_jk < 0) {
+    std::cout << "Error: Starting knot is less than 0" << std::endl;
+    std::cout << "value_rij: " << value_rij << " value_rik: " << value_rik
+              << " value_rjk: " << value_rjk << std::endl;
+    std::cout << "iknot_ij: " << iknot_ij << " iknot_ik: " << iknot_ik << " iknot_jk: " << iknot_jk
+              << std::endl;
+    std::cout << "knot_vect_size_ij: " << knot_vect_size_ij
+              << " knot_vect_size_ik: " << knot_vect_size_ik
+              << " knot_vect_size_jk: " << knot_vect_size_jk << std::endl;
+    return ret_val;
+  }
+
+  // Check the bounds of bsplines_ij, bsplines_ik, bsplines_jk
+  if (iknot_ij + 3 >= bsplines_ij.size() || iknot_ik + 3 >= bsplines_ik.size() ||
+      iknot_jk + 3 >= bsplines_jk.size()) {
+    std::cout << "Error: Index out of bounds for bsplines" << std::endl;
+    return ret_val;
+  }
+
+  // Check the bounds of coeff_matrix
+  if (iknot_ij + 3 >= coeff_matrix.size() || iknot_ik + 3 >= coeff_matrix[0].size() ||
+      iknot_jk + 3 >= coeff_matrix[0][0].size()) {
+    std::cout << "Error: Index out of bounds for coeff_matrix" << std::endl;
+    return ret_val;
+  }
+
+  // Check the bounds of dnbsplines_ij, dnbsplines_ik, dnbsplines_jk
+  if (iknot_ij + 2 >= dnbsplines_ij.size() || iknot_ik + 2 >= dnbsplines_ik.size() ||
+      iknot_jk + 2 >= dnbsplines_jk.size()) {
+    std::cout << "Error: Index out of bounds for dnbsplines" << std::endl;
+    return ret_val;
+  }
+
+  // Check the bounds of dncoeff_matrix_ij, dncoeff_matrix_ik, dncoeff_matrix_jk
+  if (iknot_ij + 2 >= dncoeff_matrix_ij.size() || iknot_ik + 2 >= dncoeff_matrix_ik.size() ||
+      iknot_jk + 2 >= dncoeff_matrix_jk.size()) {
+    std::cout << "Error: Index out of bounds for dncoeff_matrix" << std::endl;
+    return ret_val;
+  }
 
   double rsq_ij = value_rij * value_rij;
   double rsq_ik = value_rik * value_rik;
@@ -234,49 +294,42 @@ double uf3_triplet_bspline::memory_usage()
 {
   double bytes = 0;
 
-  bytes += (double) 3*sizeof(int);          //knot_vect_size_ij,
-                                            //knot_vect_size_ik,
-                                            //knot_vect_size_jk;
+  bytes += (double) 3 * sizeof(int);    //knot_vect_size_ij,
+                                        //knot_vect_size_ik,
+                                        //knot_vect_size_jk;
 
-  for (int i=0; i<coeff_matrix.size(); i++)
-    for (int j=0; j<coeff_matrix[i].size(); j++)
-      bytes += (double)coeff_matrix[i][j].size()*sizeof(double);
+  for (int i = 0; i < coeff_matrix.size(); i++)
+    for (int j = 0; j < coeff_matrix[i].size(); j++)
+      bytes += (double) coeff_matrix[i][j].size() * sizeof(double);
 
+  for (int i = 0; i < dncoeff_matrix_ij.size(); i++)
+    for (int j = 0; j < dncoeff_matrix_ij[i].size(); j++)
+      bytes += (double) dncoeff_matrix_ij[i][j].size() * sizeof(double);
 
-  for (int i=0; i<dncoeff_matrix_ij.size(); i++)
-    for (int j=0; j<dncoeff_matrix_ij[i].size(); j++)
-      bytes += (double)dncoeff_matrix_ij[i][j].size()*sizeof(double);
+  for (int i = 0; i < dncoeff_matrix_ik.size(); i++)
+    for (int j = 0; j < dncoeff_matrix_ik[i].size(); j++)
+      bytes += (double) dncoeff_matrix_ik[i][j].size() * sizeof(double);
 
-  for (int i=0; i<dncoeff_matrix_ik.size(); i++)
-    for (int j=0; j<dncoeff_matrix_ik[i].size(); j++)
-      bytes += (double)dncoeff_matrix_ik[i][j].size()*sizeof(double);
+  for (int i = 0; i < dncoeff_matrix_jk.size(); i++)
+    for (int j = 0; j < dncoeff_matrix_jk[i].size(); j++)
+      bytes += (double) dncoeff_matrix_jk[i][j].size() * sizeof(double);
 
-  for (int i=0; i<dncoeff_matrix_jk.size(); i++)
-    for (int j=0; j<dncoeff_matrix_jk[i].size(); j++)
-      bytes += (double)dncoeff_matrix_jk[i][j].size()*sizeof(double);
+  bytes += (double) knot_matrix[0].size() * sizeof(double);
+  bytes += (double) knot_matrix[1].size() * sizeof(double);
+  bytes += (double) knot_matrix[2].size() * sizeof(double);
 
-  bytes += (double)knot_matrix[0].size()*sizeof(double);
-  bytes += (double)knot_matrix[1].size()*sizeof(double);
-  bytes += (double)knot_matrix[2].size()*sizeof(double);
+  for (int i = 0; i < bsplines_ij.size(); i++) bytes += (double) bsplines_ij[i].memory_usage();
 
-  for (int i=0; i < bsplines_ij.size(); i++)
-    bytes += (double)bsplines_ij[i].memory_usage();
+  for (int i = 0; i < bsplines_ik.size(); i++) bytes += (double) bsplines_ik[i].memory_usage();
 
-  for (int i=0; i < bsplines_ik.size(); i++)
-    bytes += (double)bsplines_ik[i].memory_usage();
+  for (int i = 0; i < bsplines_jk.size(); i++) bytes += (double) bsplines_jk[i].memory_usage();
 
-  for (int i=0; i < bsplines_jk.size(); i++)
-    bytes += (double)bsplines_jk[i].memory_usage();
+  for (int i = 0; i < dnbsplines_ij.size(); i++) bytes += (double) dnbsplines_ij[i].memory_usage();
 
-  for (int i=0; i < dnbsplines_ij.size(); i++)
-    bytes += (double)dnbsplines_ij[i].memory_usage();
+  for (int i = 0; i < dnbsplines_ik.size(); i++) bytes += (double) dnbsplines_ik[i].memory_usage();
 
-  for (int i=0; i < dnbsplines_ik.size(); i++)
-    bytes += (double)dnbsplines_ik[i].memory_usage();
+  for (int i = 0; i < dnbsplines_jk.size(); i++) bytes += (double) dnbsplines_jk[i].memory_usage();
 
-  for (int i=0; i < dnbsplines_jk.size(); i++)
-    bytes += (double)dnbsplines_jk[i].memory_usage();
-
-  bytes += (double)4*sizeof(double);                        //ret_val
+  bytes += (double) 4 * sizeof(double);    //ret_val
   return bytes;
 }
