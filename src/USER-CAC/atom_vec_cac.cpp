@@ -55,11 +55,12 @@ AtomVecCAC::AtomVecCAC(LAMMPS *lmp) : AtomVec(lmp)
   asa_pointer = NULL;
   hold_nodal_positions = NULL;
   connected_nodes = NULL;
+  connected_nodes_count = NULL;
   max_old = 0;
   CAC_nmax = 0;
   alloc_counter = 0;
 
-  connected_nodes_bool = false;
+  connected_nodes_bool = true;
 
   //instance asa interface object
   asa_pointer = new Asa_Data(lmp, this);
@@ -190,6 +191,7 @@ void AtomVecCAC::grow(int n)
   poly_count = memory->grow(atom->poly_count, nmax, "atom:type_count");
   element_type = memory->grow(atom->element_type, nmax, "atom:element_type");
   element_scale = memory->grow(atom->element_scale, nmax, 3, "atom:element_scales");
+  //connected_nodes_count = memory->grow(atom->connected_nodes_count, nmax, "atom:connected_nodes");
 
   //grow pointers for a ragged allocation strategy since atoms allocate far less memory
   if (CAC_nmax == 0) {
@@ -231,6 +233,8 @@ void AtomVecCAC::grow(int n)
     if (connected_nodes_bool) {
       atom->connected_nodes = connected_nodes = (int **) memory->srealloc(
           atom->connected_nodes, sizeof(int *) * nmax, "atom:connected_nodes");
+      //atom->connected_nodes_count = connected_nodes_count = (int *) memory->srealloc(
+      //  connected_nodes_count, sizeof(int) * nmax, "atom:connected_nodes");
     }
   }
 
@@ -260,7 +264,7 @@ void AtomVecCAC::shrink_array(int n)
   poly_count = memory->grow(atom->poly_count, nmax, "atom:type_count");
   element_type = memory->grow(atom->element_type, nmax, "atom:element_type");
   element_scale = memory->grow(atom->element_scale, nmax, 3, "atom:element_scales");
-
+  //connected_nodes_count = memory->grow(atom->connected_nodes_count, nmax, "atom:connected_nodes");
   //deallocate element contents if n is smaller than the alloc counter for elements
   for (int element_index = alloc_counter - 1; element_index >= nmax; element_index--) {
     memory->destroy(node_types[element_index]);
@@ -294,6 +298,8 @@ void AtomVecCAC::shrink_array(int n)
   if (connected_nodes_bool) {
     atom->connected_nodes = connected_nodes = (int **) memory->srealloc(
         atom->connected_nodes, sizeof(int *) * nmax, "atom:connected_nodes");
+    //atom->connected_nodes_count = connected_nodes_count =
+    //   (int *) memory->srealloc(connected_nodes_count, sizeof(int) * nmax, "atom:connected_nodes");
   }
 
   if (atom->nextra_grow)
@@ -337,7 +343,7 @@ void AtomVecCAC::allocate_element(int element_index, int node_count, int poly_co
   memory->create(nodal_virial[element_index], poly_count, node_count, 6, "atom:nodal_virial");
   if (connected_nodes_bool) {
     for (int j = 0; j < node_count; j++) {
-      memory->create(connected_nodes[element_index + j], 8, "atom:connected_nodes");
+      memory->create(connected_nodes[element_index * node_count + j], 8, "atom:connected_nodes");
     }
   }
 }
@@ -365,7 +371,10 @@ void AtomVecCAC::grow_reset()
   element_type = atom->element_type;
   element_scale = atom->element_scale;
   node_types = atom->node_types;
-  if (connected_nodes_bool) { connected_nodes = atom->connected_nodes; }
+  if (connected_nodes_bool) {
+    connected_nodes = atom->connected_nodes;
+    // connected_nodes_count = atom->connected_nodes_count;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -418,9 +427,12 @@ void AtomVecCAC::copy(int i, int j, int delflag)
   memory->create(nodal_velocities[j], poly_count[j], node_count, 3, "atom:nodal_velocities");
   memory->create(nodal_forces[j], poly_count[j], node_count, 3, "atom:nodal_forces");
   memory->create(nodal_virial[j], poly_count[j], node_count, 6, "atom:nodal_virial");
-  // if (connected_nodes_bool) {
-  //   memory->create(connected_nodes[j * node_count], 8, "atom:connected_nodes");
-  // }
+  if (connected_nodes_bool) {
+    for (int x = 0; x < node_count; x++) {
+      //memory->create(connected_nodes[j * node_count + x], 8, "atom:connected_nodes");
+    }
+    //memory->create(connected_nodes[j], 8, "atom:connected_nodes");
+  }
 
   for (int type_map = 0; type_map < poly_count[j]; type_map++) {
     node_types[j][type_map] = node_types[i][type_map];
@@ -1698,10 +1710,13 @@ void AtomVecCAC::build_node_connectivity()
   int npoly;
   int current_node_count;
 
+  poly_index = 0;
+
   //loop through every element and add each nodal position to the connected map
   for (int i = 0; i < nlocal; i++) {
     for (int nodecount = 0; nodecount < nodes_count_list[element_type[i]]; nodecount++) {
-      node_index = i * (poly_index + 1) * nodes_per_element + nodecount;
+      node_index = i * nodes_per_element + nodecount;
+      //printf("Node index: %d\n", node_index);
       NodeCoord coord = {(int) nodal_positions[i][poly_index][nodecount][0],
                          (int) nodal_positions[i][poly_index][nodecount][1],
                          (int) nodal_positions[i][poly_index][nodecount][2]};
@@ -1716,13 +1731,14 @@ void AtomVecCAC::build_node_connectivity()
       //set connected_nodes array. We need one entry for every index in the vector in the map.
       for (int i = 0; i < pair.second.size(); i++) {
         int index = pair.second[i];
+        // connected_nodes_count[index] = pair.second.size();
         //convert pair.second vector to int* array to store the "other" nodes
-        int connected_nodes1[pair.second.size()];
+        //int connected_nodes1[pair.second.size()];
         for (int j = 0; j < pair.second.size(); j++) {
-          if (j != i) { connected_nodes1[j] = pair.second[j]; }
+          if (j != i) { connected_nodes[index][j] = pair.second[j]; }
         }
 
-        connected_nodes[index] = connected_nodes1;
+        //connected_nodes[index] = connected_nodes1;
       }
       //if (pair.second[0] > 1000) { printf("Node %d is connected to: \n", pair.second[0]); }
     }

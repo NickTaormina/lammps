@@ -93,6 +93,7 @@ class AtomVecCAC : public AtomVec {
   int CAC_nmax;
   int alloc_counter;
   int **connected_nodes;
+  int *connected_nodes_count;
   bool connected_nodes_bool;
 
   struct NodeInfo {

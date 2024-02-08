@@ -156,6 +156,7 @@ class Atom : protected Pointers {
 
   //connected mesh
   int **connected_nodes, **connected_corners, **connected_elements;
+  int *connected_nodes_count;
   double ***nodal_indices;
 
   // USER-DPD package

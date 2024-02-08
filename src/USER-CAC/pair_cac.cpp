@@ -92,6 +92,8 @@ PairCAC::PairCAC(LAMMPS *lmp) : Pair(lmp)
   shape_functions = (Shape_Functions *) memory->smalloc(sizeof(Shape_Functions) * MAXESHAPE,
                                                         "Pair CAC:shape_functions");
   set_shape_functions();
+
+  maxqi = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -565,6 +567,10 @@ void PairCAC::compute_forcev(int iii)
   }
 
   if (poly_counter == current_poly_count - 1) qi += quadrature_counts[iii];
+  if (qi > maxqi) {
+    maxqi = qi;
+    //printf("maxqi %d; element: %d\n", maxqi, iii);
+  }
 }
 
 /* ---------------------------------------------------------------------- 
@@ -894,7 +900,7 @@ void PairCAC::interpolation(int iii, double sq, double tq, double wq)
   for (int l = 0; l < neigh_max; l++) {
     inner_etypes[l] = element_type[inner_indices[l][0]];
     //Q8 interpolation scheme
-    if (inner_etypes[l] == 1 || inner_etypes[l] == 3 ) {
+    if (inner_etypes[l] == 1 || inner_etypes[l] == 3) {
       s = inner_ucells[l][0];
       t = inner_ucells[l][1];
       w = inner_ucells[l][2];

@@ -174,6 +174,7 @@ Atom::Atom(LAMMPS *lmp) : Pointers(lmp)
   nodal_positions = NULL;
   initial_nodal_positions = NULL;
   connected_nodes = NULL;
+  connected_nodes_count = NULL;
   nodal_velocities = NULL;
   nodal_forces = NULL;
   poly_count = NULL;
@@ -378,6 +379,7 @@ Atom::~Atom()
   memory->sfree(nodal_positions);
   memory->sfree(initial_nodal_positions);
   memory->sfree(connected_nodes);
+  memory->sfree(connected_nodes_count);
   memory->sfree(nodal_velocities);
   memory->sfree(nodal_forces);
   memory->destroy(poly_count);
